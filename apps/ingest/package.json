@@ -5,15 +5,6 @@
   "description": "OTEL span ingest endpoint for whoops.dev. Vercel Functions on Fluid Compute.",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "vercel dev",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@whoops/detectors": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.6.0"
+    "build": "echo 'apps/ingest is a placeholder; routes live in apps/web/app/api for v0' && exit 0"
   }
 }

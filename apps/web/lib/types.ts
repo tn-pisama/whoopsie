@@ -1,22 +1,29 @@
-export interface ToolEvent {
+export interface ToolCall {
+  toolCallId: string;
   toolName: string;
   args?: unknown;
   result?: unknown;
   startTime: number;
+  endTime?: number;
 }
 
-export interface AgentTrace {
+export interface TraceEvent {
+  projectId: string;
   traceId: string;
+  spanId: string;
+  parentSpanId?: string;
   startTime: number;
-  endTime?: number;
-  model?: string;
+  endTime: number;
+  model: string;
   prompt?: string;
   completion?: string;
-  toolCalls: ToolEvent[];
+  toolCalls: ToolCall[];
   inputTokens?: number;
   outputTokens?: number;
   costUsd?: number;
   finishReason?: string;
+  error?: { message: string; name?: string };
+  metadata: Record<string, unknown>;
 }
 
 export interface DetectionResult {
@@ -28,15 +35,7 @@ export interface DetectionResult {
   evidence?: Record<string, unknown>;
 }
 
-export interface Detector {
-  name: string;
-  description: string;
-  detect(trace: AgentTrace): DetectionResult;
+export interface TraceWithHits {
+  event: TraceEvent;
+  hits: DetectionResult[];
 }
-
-export const noIssue = (detector: string): DetectionResult => ({
-  detector,
-  detected: false,
-  severity: 0,
-  summary: "no issue detected",
-});

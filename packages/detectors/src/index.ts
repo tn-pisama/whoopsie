@@ -5,6 +5,7 @@ export type {
   ToolEvent,
 } from "./types.js";
 export { noIssue } from "./types.js";
+
 export {
   detectLoop,
   loopDetector,
@@ -12,15 +13,44 @@ export {
   detectCycle,
   checkDiversity,
 } from "./loop.js";
+export { detectRepetition, repetitionDetector } from "./repetition.js";
+export { detectCost, costDetector } from "./cost.js";
+export { detectCompletion, completionDetector } from "./completion.js";
+export { detectHallucination, hallucinationDetector } from "./hallucination.js";
+export { detectContext, contextDetector } from "./context.js";
+export { detectDerailment, derailmentDetector } from "./derailment.js";
 
 import { loopDetector } from "./loop.js";
+import { repetitionDetector } from "./repetition.js";
+import { costDetector } from "./cost.js";
+import { completionDetector } from "./completion.js";
+import { hallucinationDetector } from "./hallucination.js";
+import { contextDetector } from "./context.js";
+import { derailmentDetector } from "./derailment.js";
 import type { AgentTrace, Detector, DetectionResult } from "./types.js";
 
-export const v1Detectors: Detector[] = [loopDetector];
+export const v1Detectors: Detector[] = [
+  loopDetector,
+  repetitionDetector,
+  costDetector,
+  completionDetector,
+  hallucinationDetector,
+  contextDetector,
+  derailmentDetector,
+];
 
 export function runDetectors(
   trace: AgentTrace,
   detectors: Detector[] = v1Detectors,
 ): DetectionResult[] {
-  return detectors.map((d) => d.detect(trace)).filter((r) => r.detected);
+  const out: DetectionResult[] = [];
+  for (const d of detectors) {
+    try {
+      const r = d.detect(trace);
+      if (r.detected) out.push(r);
+    } catch {
+      // detectors must never break the pipeline
+    }
+  }
+  return out;
 }

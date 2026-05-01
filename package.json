@@ -9,10 +9,11 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
+    "dev": "pnpm --filter @whoops/web dev",
+    "start": "pnpm --filter @whoops/web start",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint"
+    "test": "pnpm --filter @whoops/detectors test",
+    "smoke": "./scripts/smoke.sh"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

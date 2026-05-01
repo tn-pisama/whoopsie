@@ -8,7 +8,14 @@ export interface ExporterOptions {
   fetchImpl?: typeof fetch;
 }
 
-const DEFAULT_ENDPOINT = "https://ingest.whoops.dev/v1/spans";
+const HOSTED_ENDPOINT = "https://whoops.dev/api/v1/spans";
+
+function defaultEndpoint(): string {
+  if (typeof process !== "undefined" && process.env.WHOOPS_INGEST_URL) {
+    return process.env.WHOOPS_INGEST_URL;
+  }
+  return HOSTED_ENDPOINT;
+}
 
 export class TraceExporter {
   private buffer: TraceEvent[] = [];
@@ -20,7 +27,7 @@ export class TraceExporter {
   private readonly fetchImpl: typeof fetch;
 
   constructor(opts: ExporterOptions) {
-    this.endpoint = opts.endpoint ?? DEFAULT_ENDPOINT;
+    this.endpoint = opts.endpoint ?? defaultEndpoint();
     this.projectId = opts.projectId;
     this.flushIntervalMs = opts.flushIntervalMs ?? 1000;
     this.maxBatchSize = opts.maxBatchSize ?? 32;
