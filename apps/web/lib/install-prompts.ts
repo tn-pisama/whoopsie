@@ -56,8 +56,8 @@ export const platforms: PlatformPrompt[] = [
     blurb:
       "Open your Lovable project, click the chat with the AI, paste the prompt below.",
     whereToPaste: "the chat with the Lovable AI",
-    envVarLocation: "Lovable → Project Settings → Environment Variables",
-    template: (id) => baseInstructions(id, "Lovable → Project Settings → Environment Variables"),
+    envVarLocation: "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)",
+    template: (id) => baseInstructions(id, "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)"),
   },
   {
     slug: "replit",
@@ -92,12 +92,11 @@ export const platforms: PlatformPrompt[] = [
     blurb:
       "On v0.dev, paste the prompt below into the chat with v0.",
     whereToPaste: "the v0.dev chat",
-    envVarLocation:
-      "v0 → Project Settings → Environment Variables (or hardcode it for now if v0 won't let you set env vars yet)",
+    envVarLocation: "the Vars panel in the v0 chat sidebar",
     template: (id) =>
       baseInstructions(
         id,
-        "v0 → Project Settings → Environment Variables (or hardcode it temporarily)",
+        "the Vars panel in the v0 chat sidebar",
       ),
   },
 ];
