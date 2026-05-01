@@ -81,6 +81,35 @@ export default async function InstallPage({
         </p>
       </section>
 
+      <section className="mt-4 border-t border-line py-12">
+        <h2 className="text-xl font-semibold tracking-tight">
+          Bonus: see failures inside your editor
+        </h2>
+        <p className="mt-4 text-ink-muted">
+          If you use Cursor or Claude Code, add whoopsie as an MCP server and
+          your editor&apos;s AI can read your live failures. Then you can just ask{" "}
+          <em>&ldquo;what did my agent break in the last hour?&rdquo;</em> in
+          chat instead of switching tabs.
+        </p>
+        <pre className={`${GeistMono.className} mt-4 overflow-x-auto rounded-md border border-line bg-white p-4 text-[12px] leading-6 text-ink-soft`}>
+{`// ~/.cursor/mcp.json
+{
+  "mcpServers": {
+    "whoopsie": {
+      "command": "npx",
+      "args": ["-y", "@whoopsie/cli", "mcp"],
+      "env": { "WHOOPSIE_PROJECT_ID": "${projectId}" }
+    }
+  }
+}`}
+        </pre>
+        <p className="mt-2 text-xs text-ink-muted">
+          Same shape works for Claude Code (
+          <code className={GeistMono.className}>~/.claude/mcp_servers.json</code>
+          ) and any other MCP-compatible client.
+        </p>
+      </section>
+
       <footer className="border-t border-line py-12 font-mono text-xs text-ink-muted">
         <a href="/" className="hover:text-ink">← back</a>
       </footer>
