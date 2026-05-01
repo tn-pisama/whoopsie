@@ -1,135 +1,142 @@
 # Registration runbook
 
-Both `whoops.dev` and the `@whoops/*` npm scope are unregistered as of 2026-04-30. This file walks through claiming them. The agent cannot do this for you — domain registrars and npm both require human auth.
+Status as of 2026-04-30:
 
-## Verify availability before paying
+- ✅ Domain `whoopsie.dev` registered via Cloudflare Registrar ($12.20/yr).
+- ⏳ npm `@whoopsie/*` scope unclaimed — see step 1 below.
+- ⏳ GitHub `whoopsie-dev` org unclaimed — see step 3 below.
+- ⏳ DNS pointing at Vercel — see step 2 below.
 
-```bash
-# Domain — should print no NS / no A record. If it has NS records, someone took it.
-dig +short whoops.dev NS @1.1.1.1
-dig +short whoops.dev A @1.1.1.1
-
-# npm scope — 404 means open
-npm view @whoops/sdk
-npm view @whoops/cli
-npm view @whoops/detectors
-```
-
-If any of those resolve to a registered name, fall through to one of the alternates I checked: `flake.dev`, `yikes.dev`, `derp.dev`, `borks.dev`, `borkly.dev`, `whoopsbot.dev`. None had a public-facing site at the time of writing.
-
-## Domain: whoops.dev
-
-The `.dev` TLD is run by Google Registry. It is HSTS-preloaded — every host gets HTTPS for free, no http allowed.
-
-**Recommended registrar: Cloudflare Registrar** (at-cost, no markup, free WHOIS privacy, DNSSEC included).
-
-1. Sign in at https://dash.cloudflare.com → Domain Registration → Register Domains.
-2. Search `whoops.dev`. Cost is the wholesale `.dev` price (currently around $13/year).
-3. Add to cart, complete payment.
-4. Cloudflare automatically uses Cloudflare DNS for the new domain.
-
-**Fallback registrar: Namecheap** if you already have an account there (`https://www.namecheap.com/domains/registration/results/?domain=whoops.dev`). Pay the markup.
-
-### Pointing at Vercel
-
-After registering, in Vercel:
-
-1. Project → Settings → Domains → Add `whoops.dev` and `www.whoops.dev`.
-2. Vercel will print two records:
-   - `whoops.dev` → A record `76.76.21.21`
-   - `www.whoops.dev` → CNAME `cname.vercel-dns.com`
-3. In Cloudflare DNS:
-   - Add the A record for the apex
-   - Add the CNAME for `www`
-   - Both **proxy off** ("DNS only" / grey cloud) — Vercel handles TLS itself, Cloudflare proxy will conflict with their certificate provisioning.
-
-Vercel auto-provisions a TLS cert via Let's Encrypt within ~60 seconds.
-
-### Catch-all subdomains we'll likely want later
-
-- `ingest.whoops.dev` — when we split ingest off the main app
-- `api.whoops.dev` — public API
-- `docs.whoops.dev` — docs site
-
-Skip these until we need them.
-
-## npm: @whoops scope
+## 1. Claim the npm scope (free, ~1 minute)
 
 ```bash
-# 1. Make sure you're logged in as the right user.
-npm whoami
-
-# 2. Create the org. The org NAME is the scope, lowercase.
-npm org create whoops
-
-# That's it. The scope is now reserved. No payment needed for public packages.
+npm whoami                    # confirm you're logged in as the right user
+npm org create whoopsie       # creates the @whoopsie scope under the Free org tier
 ```
 
-The org membership defaults to "Free" tier, which allows unlimited public packages but no private packages. That's all we need.
+The Free org tier allows unlimited public packages and zero private packages, which is all `whoopsie` needs.
 
-### First publish
-
-Each package's `package.json` already has `"name": "@whoops/<thing>"` and `"license": "MIT"`. Publish all three:
+Verify:
 
 ```bash
-nvm use   # Node 22
-pnpm install
-pnpm build
-pnpm release
+curl -fsSL https://registry.npmjs.org/-/org/whoopsie | python3 -m json.tool | head
 ```
 
-The `release` script at the root `package.json` runs `pnpm -r publish --access public --no-git-checks`. The `--access public` flag is **required** the first time — npm defaults scoped packages to private which the free org tier disallows.
+After the scope exists, the first publish from this repo:
 
-### Trusted Publishing (recommended once you ship)
+```bash
+nvm use && pnpm install && pnpm build
+pnpm release   # runs `pnpm -r --filter ./packages/* publish --access public --no-git-checks`
+```
 
-Once the packages exist on npm, set up [Trusted Publishing via GitHub OIDC](https://docs.npmjs.com/trusted-publishers) so future releases don't need an npm token:
+`--access public` is required the first time scoped packages publish — npm defaults scoped to private which the Free tier disallows.
 
-1. Push the repo to `github.com/whoops-dev/whoops`.
-2. In npm: each package → Settings → Trusted Publishers → Add a GitHub Actions publisher.
-3. Add a `.github/workflows/release.yml` that runs on tag push.
+### Trusted Publishing (do once, then no NPM_TOKEN secret needed)
 
-(I haven't written that workflow yet — it's a follow-on.)
+`.github/workflows/release.yml` is already wired for [npm Trusted Publishing via GitHub OIDC](https://docs.npmjs.com/trusted-publishers). After you push the repo to GitHub:
 
-## GitHub org
+1. For each of the three packages (`@whoopsie/sdk`, `@whoopsie/cli`, `@whoopsie/detectors`):
+   - npm UI → package → Settings → Trusted Publishers → Add a GitHub Actions publisher.
+   - Repo: `whoopsie-dev/whoopsie`
+   - Workflow filename: `release.yml`
+   - Environment: leave blank
+2. Future releases happen via `git tag v0.0.x && git push --tags` — the workflow does typecheck → test → build → publish with provenance attestation.
 
-Claim `https://github.com/whoops-dev` (the obvious org name) before someone else does.
+## 2. Point the domain at Vercel
 
-1. https://github.com/account/organizations/new → Free plan.
-2. Move the repo from the user's personal namespace to the org.
-3. Update the repo URL in:
-   - `package.json` `repository.url` in each `packages/*` and `apps/*`
-   - `README.md` clone instructions
-   - The Vercel project's connected repo
+In Vercel:
 
-## Social handles to grab early
+1. Project `whoopsie` → Settings → Domains → Add `whoopsie.dev` and `www.whoopsie.dev`.
+2. Vercel prints two records:
+   - `whoopsie.dev` → A record `76.76.21.21`
+   - `www.whoopsie.dev` → CNAME `cname.vercel-dns.com`
+
+In Cloudflare → DNS:
+
+- Add the A record at apex (`whoopsie.dev`)
+- Add the CNAME at `www`
+- **Both proxy off** — grey cloud / "DNS only". Vercel handles TLS itself; the Cloudflare proxy will conflict with Vercel's certificate provisioning.
+
+Vercel auto-provisions a Let's Encrypt cert within ~60 seconds.
+
+`.dev` is HSTS-preloaded by Google Registry — every host gets HTTPS for free, no http allowed. Nothing extra to configure.
+
+### API-driven setup if you'd rather not click
+
+If you have a Cloudflare API token with `Zone:DNS:Edit` permission:
+
+```bash
+ZONE_ID=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/zones?name=whoopsie.dev" | jq -r '.result[0].id')
+
+# Apex A record
+curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"A","name":"whoopsie.dev","content":"76.76.21.21","proxied":false,"ttl":1}'
+
+# www CNAME
+curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"CNAME","name":"www","content":"cname.vercel-dns.com","proxied":false,"ttl":1}'
+```
+
+Don't paste the token into a shell history file. Use `read -s` or scope the token to the API key store.
+
+## 3. Claim the GitHub org
+
+`https://github.com/account/organizations/new` → Free plan, name `whoopsie-dev`.
+
+Then push this repo:
+
+```bash
+cd ~/whoopsie
+git remote add origin git@github.com:whoopsie-dev/whoopsie.git
+git push -u origin main
+```
+
+After the push, in each `packages/*/package.json`, the `repository.url` field should already point at `https://github.com/whoopsie-dev/whoopsie` (the rename swept this earlier). Verify:
+
+```bash
+grep -r "repository" ~/whoopsie/packages/*/package.json
+```
+
+## 4. Subdomains for later
+
+- `ingest.whoopsie.dev` — when we split ingest off the main app
+- `api.whoopsie.dev` — public API
+- `docs.whoopsie.dev` — docs site
+
+Skip these until needed.
+
+## 5. Social handles
 
 These don't matter for the product but go fast:
 
-- Twitter/X: `@whoopsdev`
-- Bluesky: `@whoops.dev` (the domain doubles as the handle once you set the DNS verification record)
-- GitHub: `whoops-dev` (org)
+- Twitter/X: `@whoopsiedev`
+- Bluesky: `@whoopsie.dev` (the domain itself doubles as the handle once you set the DNS verification record)
 
 ## Cost summary
 
 | Item | One-time | Recurring |
 |---|---|---|
-| `whoops.dev` (Cloudflare Registrar) | ~$13 | ~$13/yr |
-| `@whoops` npm scope | $0 | $0 (free tier, public only) |
-| `whoops-dev` GitHub org | $0 | $0 (free plan) |
+| `whoopsie.dev` (Cloudflare Registrar) | $12.20 ✅ paid | $12.20/yr |
+| `@whoopsie` npm scope | $0 | $0 (free tier, public only) |
+| `whoopsie-dev` GitHub org | $0 | $0 (free plan) |
 | Cloudflare DNS | $0 | $0 |
 | Vercel project | $0 | $0 (Hobby tier sufficient until first paying customer) |
 
-Total to claim everything: about $13.
+Total recurring: $12.20/yr.
 
-## After registration
+## Lesson learned
 
-Re-run the check and update `README.md`:
+I originally used `dig` to check domain availability and reported `whoops.dev` as available because it had no NS / no A records. That was wrong — a domain can be registered without any DNS records published. Someone registered `whoops.dev` between session start and the moment we tried to buy it. The right check is RDAP against the registry's authoritative endpoint:
 
 ```bash
-# Confirm registered
-dig +short whoops.dev NS @1.1.1.1   # expect Cloudflare nameservers
-npm view @whoops/sdk version         # expect 0.0.1 once you've published
-
-# Edit README — remove the "domain whoops.dev and npm @whoops scope are still
-# unregistered" line from the honest gaps section.
+curl -sI https://pubapi.registry.google/rdap/domain/<name>.dev
+# 200 = registered
+# 404 = available
 ```
+
+This is reflected in CLAUDE.md.

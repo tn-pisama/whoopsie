@@ -8,11 +8,11 @@ export interface ExporterOptions {
   fetchImpl?: typeof fetch;
 }
 
-const HOSTED_ENDPOINT = "https://whoops.dev/api/v1/spans";
+const HOSTED_ENDPOINT = "https://whoopsie.dev/api/v1/spans";
 
 function defaultEndpoint(): string {
-  if (typeof process !== "undefined" && process.env.WHOOPS_INGEST_URL) {
-    return process.env.WHOOPS_INGEST_URL;
+  if (typeof process !== "undefined" && process.env.WHOOPSIE_INGEST_URL) {
+    return process.env.WHOOPSIE_INGEST_URL;
   }
   return HOSTED_ENDPOINT;
 }
@@ -64,7 +64,7 @@ export class TraceExporter {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-whoops-project-id": this.projectId,
+          "x-whoopsie-project-id": this.projectId,
         },
         body: JSON.stringify({ events: batch }),
         keepalive: true,

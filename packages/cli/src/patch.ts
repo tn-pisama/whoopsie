@@ -75,7 +75,7 @@ function findModelArg(call: CallExpression): ObjectLiteralElementLike | undefine
 
 function alreadyPatched(file: SourceFile): boolean {
   return file.getImportDeclarations().some((d) =>
-    d.getModuleSpecifierValue() === "@whoops/sdk",
+    d.getModuleSpecifierValue() === "@whoopsie/sdk",
   );
 }
 
@@ -100,8 +100,8 @@ function addImports(file: SourceFile): void {
   }
 
   file.addImportDeclaration({
-    moduleSpecifier: "@whoops/sdk",
-    namedImports: ["whoopsMiddleware"],
+    moduleSpecifier: "@whoopsie/sdk",
+    namedImports: ["whoopsieMiddleware"],
   });
 }
 
@@ -110,6 +110,6 @@ function wrapModelArg(_call: CallExpression, modelProp: ObjectLiteralElementLike
   if (!initializer) return;
   const original = initializer.getText();
   initializer.replaceWithText(
-    `wrapLanguageModel({ model: ${original}, middleware: whoopsMiddleware() })`,
+    `wrapLanguageModel({ model: ${original}, middleware: whoopsieMiddleware() })`,
   );
 }

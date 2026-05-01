@@ -90,7 +90,7 @@ function Header({
         <span
           className={`${GeistMono.className} text-lg lowercase tracking-tight`}
         >
-          whoops
+          whoopsie
         </span>
         <span className="flex items-center gap-2 font-mono text-xs text-ink-muted">
           <PulseDot />
@@ -125,7 +125,7 @@ function EmptyState({
         here within a second.
       </p>
       <div className="rounded-md border border-line bg-white px-4 py-3 font-mono text-xs text-ink-soft">
-        <span className="text-ink-muted">WHOOPS_PROJECT_ID=</span>
+        <span className="text-ink-muted">WHOOPSIE_PROJECT_ID=</span>
         {projectId}
       </div>
       {status !== "live" && status !== "connecting" && (

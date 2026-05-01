@@ -1,8 +1,8 @@
 {
-  "name": "@whoops/web",
+  "name": "@whoopsie/web",
   "version": "0.0.0",
   "private": true,
-  "description": "whoops.dev — live dashboard for AI agent failures",
+  "description": "whoopsie.dev — live dashboard for AI agent failures",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,7 +11,7 @@
     "test": "tsx --test 'test/**/*.test.ts'"
   },
   "dependencies": {
-    "@whoops/detectors": "workspace:*",
+    "@whoopsie/detectors": "workspace:*",
     "geist": "^1.4.0",
     "next": "^16.0.0",
     "pg": "^8.13.0",

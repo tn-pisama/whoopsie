@@ -1,15 +1,15 @@
-// Integration test — requires WHOOPS_TEST_DATABASE_URL pointing at a
+// Integration test — requires WHOOPSIE_TEST_DATABASE_URL pointing at a
 // Postgres database. Skips silently when the env var is unset.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PostgresStore } from "../lib/store";
 import type { TraceWithHits } from "../lib/types";
 
-const databaseUrl = process.env.WHOOPS_TEST_DATABASE_URL;
+const databaseUrl = process.env.WHOOPSIE_TEST_DATABASE_URL;
 
-const skipReason = databaseUrl ? null : "WHOOPS_TEST_DATABASE_URL not set";
+const skipReason = databaseUrl ? null : "WHOOPSIE_TEST_DATABASE_URL not set";
 
-const evt = (id: string, projectId = "wh_pg_test"): TraceWithHits => ({
+const evt = (id: string, projectId = "ws_pg_test"): TraceWithHits => ({
   event: {
     projectId,
     traceId: id,
@@ -30,7 +30,7 @@ async function withStore(
 ): Promise<void> {
   const store = await PostgresStore.connect(databaseUrl!);
   // Use a unique project ID per test run so concurrent runs don't collide.
-  const scope = `wh_test_${Date.now().toString(36)}_${Math.random()
+  const scope = `ws_test_${Date.now().toString(36)}_${Math.random()
     .toString(36)
     .slice(2, 6)}`;
   try {
@@ -39,7 +39,7 @@ async function withStore(
     // Clean up rows for this scope to keep the test DB tidy.
     try {
       const pool = (store as unknown as { pool: import("pg").Pool }).pool;
-      await pool.query("DELETE FROM whoops_traces WHERE project_id = $1", [
+      await pool.query("DELETE FROM whoopsie_traces WHERE project_id = $1", [
         scope,
       ]);
     } catch {
@@ -108,7 +108,7 @@ test(
       assert.equal(r2[0]!.event.traceId, "y");
       // tidy up
       const pool = (store as unknown as { pool: import("pg").Pool }).pool;
-      await pool.query("DELETE FROM whoops_traces WHERE project_id = $1", [
+      await pool.query("DELETE FROM whoopsie_traces WHERE project_id = $1", [
         otherScope,
       ]);
     });

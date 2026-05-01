@@ -3,7 +3,7 @@ import path from "node:path";
 
 const config: NextConfig = {
   typedRoutes: true,
-  transpilePackages: ["@whoops/detectors", "@whoops/sdk"],
+  transpilePackages: ["@whoopsie/detectors", "@whoopsie/sdk"],
   turbopack: {
     root: path.resolve(__dirname, "../.."),
   },

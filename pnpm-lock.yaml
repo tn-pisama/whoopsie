@@ -19,7 +19,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@whoops/detectors':
+      '@whoopsie/detectors':
         specifier: workspace:*
         version: link:../../packages/detectors
       geist:
@@ -102,7 +102,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@whoops/detectors':
+      '@whoopsie/detectors':
         specifier: workspace:*
         version: link:../detectors
       nanoid:

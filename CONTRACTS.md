@@ -7,7 +7,7 @@ These shapes are shared across the SDK, the ingest endpoint, the SSE stream, and
 ```http
 POST /api/v1/spans
 Content-Type: application/json
-X-Whoops-Project-Id: wh_<nanoid>
+X-Whoopsie-Project-Id: wh_<nanoid>
 
 {
   "events": [TraceEvent, ...]
@@ -29,7 +29,7 @@ Events:
 
 ```
 event: hello
-data: {"projectId":"wh_xxx","recent":[<TraceWithHits>, ...]}
+data: {"projectId":"ws_xxx","recent":[<TraceWithHits>, ...]}
 
 event: trace
 data: {"event": <TraceEvent>, "hits": [<DetectionResult>, ...]}
@@ -67,4 +67,4 @@ In-memory only. `Map<projectId, RingBuffer<TraceWithHits>>` plus a Node `EventEm
 
 ## Auth (v0)
 
-None. `WHOOPS_PROJECT_ID` is the entire identity. Anyone with the ID can read the project's stream. Acceptable for local dev and HN-launch trust posture; magic-link comes in v0.2.
+None. `WHOOPSIE_PROJECT_ID` is the entire identity. Anyone with the ID can read the project's stream. Acceptable for local dev and HN-launch trust posture; magic-link comes in v0.2.

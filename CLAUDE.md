@@ -1,4 +1,4 @@
-# whoops
+# whoopsie
 
 The vibe-coder sibling to Pisama. TypeScript-only, Vercel-first, free forever.
 
@@ -6,10 +6,14 @@ See `~/.claude/plans/how-could-we-make-typed-hennessy.md` for the full design ra
 
 ## Anchors
 
-- Entrypoint for users: `npx @whoops/cli init` then `whoopsMiddleware()` in their `streamText` call.
+- Entrypoint for users: `npx @whoopsie/cli init` then `whoopsieMiddleware()` in their `streamText` call.
 - The 60-second hero moment lives in `packages/cli/src/init.ts` and `apps/web/app/live/[projectId]/page.tsx`.
-- Domain: `whoops.dev`. Available, not yet registered.
-- npm scope: `@whoops/*`. Available, not yet registered.
+- Domain: `whoopsie.dev`. **Registered** via Cloudflare Registrar 2026-04-30 ($12.20/yr).
+- npm scope: `@whoopsie/*`. Reserved-pending — run `npm org create whoopsie` to claim. See REGISTRATION.md.
+
+## Lessons
+
+- Never trust `dig` to check domain availability — domains can be registered without DNS records. Use RDAP against the registry's authoritative endpoint: `curl -sI https://pubapi.registry.google/rdap/domain/<name>.dev` returns 200 for registered, 404 for available. We lost `whoops.dev` to this confusion mid-session.
 
 ## Hard rules
 

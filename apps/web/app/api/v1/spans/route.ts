@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runDetectors, type AgentTrace } from "@whoops/detectors";
+import { runDetectors, type AgentTrace } from "@whoopsie/detectors";
 import { publish } from "@/lib/bus";
 import type { TraceEvent } from "@/lib/types";
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "missing events array" }, { status: 400 });
   }
 
-  const headerPid = req.headers.get("x-whoops-project-id");
+  const headerPid = req.headers.get("x-whoopsie-project-id");
   const detections: { traceId: string; hits: ReturnType<typeof runDetectors> }[] = [];
 
   for (const event of events) {
@@ -49,13 +49,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     try {
       hits = runDetectors(trace);
     } catch (err) {
-      console.error("[whoops] detector error", err);
+      console.error("[whoopsie] detector error", err);
     }
 
     try {
       await publish(projectId, { event, hits });
     } catch (err) {
-      console.error("[whoops] publish error", err);
+      console.error("[whoopsie] publish error", err);
     }
     detections.push({ traceId: event.traceId, hits });
   }
@@ -69,7 +69,7 @@ export async function OPTIONS(): Promise<Response> {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "content-type, x-whoops-project-id",
+      "Access-Control-Allow-Headers": "content-type, x-whoopsie-project-id",
     },
   });
 }

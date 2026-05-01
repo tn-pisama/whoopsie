@@ -9,7 +9,7 @@ import {
   MockLanguageModelV3,
   simulateReadableStream,
 } from "ai/test";
-import { whoopsMiddleware } from "../src/middleware.js";
+import { whoopsieMiddleware } from "../src/middleware.js";
 import { TraceExporter } from "../src/exporter.js";
 import type { TraceEvent } from "../src/types.js";
 
@@ -33,7 +33,7 @@ function captureExporter() {
     });
   }) as typeof fetch;
   const exporter = new TraceExporter({
-    projectId: "wh_test",
+    projectId: "ws_test",
     endpoint: "http://test/api/v1/spans",
     fetchImpl,
     flushIntervalMs: 5,
@@ -68,7 +68,7 @@ test("generateText: TraceEvent captured with text + tool calls + tokens", async 
 
   const wrapped = wrapLanguageModel({
     model,
-    middleware: whoopsMiddleware({ projectId: "wh_test", exporter, redact: "off" }),
+    middleware: whoopsieMiddleware({ projectId: "ws_test", exporter, redact: "off" }),
   });
 
   await generateText({
@@ -83,7 +83,7 @@ test("generateText: TraceEvent captured with text + tool calls + tokens", async 
   assert.equal(events.length, 1);
   const ev = events[0]!;
 
-  assert.equal(ev.projectId, "wh_test");
+  assert.equal(ev.projectId, "ws_test");
   assert.equal(ev.model, "test-model");
   assert.equal(ev.completion, "Hello world");
   assert.equal(ev.inputTokens, 8);
@@ -93,7 +93,7 @@ test("generateText: TraceEvent captured with text + tool calls + tokens", async 
   assert.equal(ev.toolCalls[0]!.toolName, "lookup");
   assert.deepEqual(ev.toolCalls[0]!.args, { query: "weather" });
   assert.match(ev.prompt ?? "", /Say hi/);
-  assert.equal(captured[0]!.headers["x-whoops-project-id"], "wh_test");
+  assert.equal(captured[0]!.headers["x-whoopsie-project-id"], "ws_test");
 });
 
 test("streamText: deltas accumulate into completion text", async () => {
@@ -127,7 +127,7 @@ test("streamText: deltas accumulate into completion text", async () => {
 
   const wrapped = wrapLanguageModel({
     model,
-    middleware: whoopsMiddleware({ projectId: "wh_test", exporter, redact: "off" }),
+    middleware: whoopsieMiddleware({ projectId: "ws_test", exporter, redact: "off" }),
   });
 
   const result = streamText({
@@ -186,7 +186,7 @@ test("streamText: tool calls are collected through the stream", async () => {
 
   const wrapped = wrapLanguageModel({
     model,
-    middleware: whoopsMiddleware({ projectId: "wh_test", exporter, redact: "off" }),
+    middleware: whoopsieMiddleware({ projectId: "ws_test", exporter, redact: "off" }),
   });
 
   const result = streamText({
@@ -217,8 +217,8 @@ test("redact: standard mode strips emails from completion", async () => {
 
   const wrapped = wrapLanguageModel({
     model,
-    middleware: whoopsMiddleware({
-      projectId: "wh_test",
+    middleware: whoopsieMiddleware({
+      projectId: "ws_test",
       exporter,
       redact: "standard",
     }),
@@ -247,7 +247,7 @@ test("disabled middleware (no projectId) is a passthrough no-op", async () => {
 
   const wrapped = wrapLanguageModel({
     model,
-    middleware: whoopsMiddleware({ exporter, enabled: false }),
+    middleware: whoopsieMiddleware({ exporter, enabled: false }),
   });
 
   const result = await generateText({ model: wrapped, prompt: "Hi." });

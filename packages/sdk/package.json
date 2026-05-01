@@ -1,5 +1,5 @@
 {
-  "name": "@whoops/sdk",
+  "name": "@whoopsie/sdk",
   "version": "0.0.1",
   "description": "See your AI app's failures live. Vercel AI SDK middleware that catches loops, hallucinations, and cost spikes.",
   "type": "module",
@@ -25,7 +25,7 @@
     "ai": "^6.0.0"
   },
   "dependencies": {
-    "@whoops/detectors": "workspace:*",
+    "@whoopsie/detectors": "workspace:*",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {
@@ -44,9 +44,9 @@
     "tracing"
   ],
   "license": "MIT",
-  "homepage": "https://whoops.dev",
+  "homepage": "https://whoopsie.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/whoops-dev/whoops"
+    "url": "https://github.com/whoopsie-dev/whoopsie"
   }
 }

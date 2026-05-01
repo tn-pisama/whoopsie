@@ -3,7 +3,7 @@ import { redactObject, type RedactMode } from "./redact.js";
 import { TraceExporter } from "./exporter.js";
 import type { ToolCall, TraceEvent } from "./types.js";
 
-export interface WhoopsMiddlewareOptions {
+export interface WhoopsieMiddlewareOptions {
   projectId?: string;
   endpoint?: string;
   redact?: RedactMode;
@@ -64,7 +64,7 @@ interface MiddlewareWrapStreamArgs {
   model: ModelLike;
 }
 
-export interface WhoopsLanguageModelMiddleware {
+export interface WhoopsieLanguageModelMiddleware {
   readonly specificationVersion: "v3";
   wrapGenerate: (
     args: MiddlewareWrapGenerateArgs,
@@ -74,12 +74,12 @@ export interface WhoopsLanguageModelMiddleware {
   ) => Promise<{ stream: ReadableStream<StreamPartLike> }>;
 }
 
-export function whoopsMiddleware(
-  opts: WhoopsMiddlewareOptions = {},
-): WhoopsLanguageModelMiddleware {
+export function whoopsieMiddleware(
+  opts: WhoopsieMiddlewareOptions = {},
+): WhoopsieLanguageModelMiddleware {
   const projectId =
     opts.projectId ??
-    (typeof process !== "undefined" ? process.env.WHOOPS_PROJECT_ID : undefined);
+    (typeof process !== "undefined" ? process.env.WHOOPSIE_PROJECT_ID : undefined);
 
   const enabled = opts.enabled !== false && Boolean(projectId);
   const redactMode: RedactMode = opts.redact ?? "standard";

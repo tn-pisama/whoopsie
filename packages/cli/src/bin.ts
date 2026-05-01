@@ -5,13 +5,13 @@ import { init } from "./init.js";
 const program = new Command();
 
 program
-  .name("whoops")
-  .description("See your AI app's failures live. https://whoops.dev")
+  .name("whoopsie")
+  .description("See your AI app's failures live. https://whoopsie.dev")
   .version("0.0.1");
 
 program
   .command("init")
-  .description("Wire whoopsMiddleware into your Next.js + AI SDK app")
+  .description("Wire whoopsieMiddleware into your Next.js + AI SDK app")
   .option("--cwd <path>", "Project root", process.cwd())
   .option("--no-open", "Skip opening the browser")
   .option("--dry-run", "Print planned changes without writing files")

@@ -11,7 +11,7 @@ export interface InitOptions {
   dryRun: boolean;
 }
 
-const DASHBOARD_BASE = "https://whoops.dev/live";
+const DASHBOARD_BASE = "https://whoopsie.dev/live";
 
 export async function init(opts: InitOptions): Promise<void> {
   const root = resolve(opts.cwd);
@@ -23,7 +23,7 @@ export async function init(opts: InitOptions): Promise<void> {
 
   if (!hasAi || !hasNext) {
     fail(
-      `whoops needs Next.js + Vercel AI SDK. Detected: ai=${hasAi}, next=${hasNext}.\n` +
+      `whoopsie needs Next.js + Vercel AI SDK. Detected: ai=${hasAi}, next=${hasNext}.\n` +
         `  Run: ${kleur.cyan("pnpm add ai next")} and try again.`,
     );
   }
@@ -36,13 +36,13 @@ export async function init(opts: InitOptions): Promise<void> {
   step("Patching the first streamText / generateText call site...");
   const patched = await patchStreamTextCallSite(root, opts.dryRun);
   if (patched) {
-    ok(`Wrapped model in ${kleur.bold(patched)} with whoopsMiddleware().`);
+    ok(`Wrapped model in ${kleur.bold(patched)} with whoopsieMiddleware().`);
   } else {
     warn("No streamText/generateText call site found. Add the wrapper manually:");
     console.log(kleur.dim("\n  import { wrapLanguageModel } from 'ai';"));
-    console.log(kleur.dim("  import { whoopsMiddleware } from '@whoops/sdk';"));
+    console.log(kleur.dim("  import { whoopsieMiddleware } from '@whoopsie/sdk';"));
     console.log(
-      kleur.dim("  const model = wrapLanguageModel({ model: yourModel, middleware: whoopsMiddleware() });\n"),
+      kleur.dim("  const model = wrapLanguageModel({ model: yourModel, middleware: whoopsieMiddleware() });\n"),
     );
   }
 
@@ -83,7 +83,7 @@ async function ensureProjectId(root: string, dryRun: boolean): Promise<string> {
   try {
     await access(envPath);
     const raw = await readFile(envPath, "utf8");
-    const match = raw.match(/^WHOOPS_PROJECT_ID=([^\n]+)/m);
+    const match = raw.match(/^WHOOPSIE_PROJECT_ID=([^\n]+)/m);
     if (match) existing = match[1]!.trim();
   } catch {
     // No .env.local yet, fine.
@@ -91,8 +91,8 @@ async function ensureProjectId(root: string, dryRun: boolean): Promise<string> {
 
   if (existing) return existing;
 
-  const projectId = `wh_${nanoid(16)}`;
-  const line = `WHOOPS_PROJECT_ID=${projectId}\n`;
+  const projectId = `ws_${nanoid(16)}`;
+  const line = `WHOOPSIE_PROJECT_ID=${projectId}\n`;
 
   if (dryRun) {
     console.log(kleur.dim(`  [dry-run] would append to .env.local: ${line.trim()}`));

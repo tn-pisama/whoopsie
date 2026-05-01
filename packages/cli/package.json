@@ -1,10 +1,10 @@
 {
-  "name": "@whoops/cli",
+  "name": "@whoopsie/cli",
   "version": "0.0.1",
-  "description": "CLI for whoops.dev. Run `npx @whoops/cli init` in your Next.js + AI SDK project.",
+  "description": "CLI for whoopsie.dev. Run `npx @whoopsie/cli init` in your Next.js + AI SDK project.",
   "type": "module",
   "bin": {
-    "whoops": "./dist/bin.js"
+    "whoopsie": "./dist/bin.js"
   },
   "main": "./dist/index.js",
   "files": [

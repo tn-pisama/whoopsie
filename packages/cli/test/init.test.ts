@@ -43,7 +43,7 @@ const FIXTURE_TSCONFIG = JSON.stringify({
 });
 
 async function makeFixture(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "whoops-cli-"));
+  const root = await mkdtemp(join(tmpdir(), "whoopsie-cli-"));
   await writeFile(join(root, "package.json"), JSON.stringify(FIXTURE_PKG, null, 2));
   await writeFile(join(root, "tsconfig.json"), FIXTURE_TSCONFIG);
   await mkdir(join(root, "app", "api", "chat"), { recursive: true });
@@ -51,7 +51,7 @@ async function makeFixture(): Promise<string> {
   return root;
 }
 
-test("init writes WHOOPS_PROJECT_ID and patches the streamText call", async () => {
+test("init writes WHOOPSIE_PROJECT_ID and patches the streamText call", async () => {
   const root = await makeFixture();
   try {
     // Silence init's stdout chatter
@@ -64,13 +64,13 @@ test("init writes WHOOPS_PROJECT_ID and patches the streamText call", async () =
     }
 
     const env = await readFile(join(root, ".env.local"), "utf8");
-    assert.match(env, /^WHOOPS_PROJECT_ID=wh_[A-Za-z0-9_-]+/m);
+    assert.match(env, /^WHOOPSIE_PROJECT_ID=ws_[A-Za-z0-9_-]+/m);
 
     const route = await readFile(join(root, "app", "api", "chat", "route.ts"), "utf8");
-    assert.match(route, /from "@whoops\/sdk"/);
-    assert.match(route, /whoopsMiddleware/);
+    assert.match(route, /from "@whoopsie\/sdk"/);
+    assert.match(route, /whoopsieMiddleware/);
     assert.match(route, /wrapLanguageModel/);
-    assert.match(route, /wrapLanguageModel\(\{ model: openai\("gpt-4o"\), middleware: whoopsMiddleware\(\) \}\)/);
+    assert.match(route, /wrapLanguageModel\(\{ model: openai\("gpt-4o"\), middleware: whoopsieMiddleware\(\) \}\)/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -118,8 +118,8 @@ test("init second run is idempotent (does not double-wrap)", async () => {
     // Count wrapLanguageModel CALL sites (not the import). One call expected — no double-wrap.
     const callSites = (route.match(/wrapLanguageModel\s*\(/g) ?? []).length;
     assert.equal(callSites, 1, `expected exactly one wrapLanguageModel call, got ${callSites}\n${route}`);
-    // And just one whoops import declaration.
-    const imports = (route.match(/from "@whoops\/sdk"/g) ?? []).length;
+    // And just one whoopsie import declaration.
+    const imports = (route.match(/from "@whoopsie\/sdk"/g) ?? []).length;
     assert.equal(imports, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -129,7 +129,7 @@ test("init second run is idempotent (does not double-wrap)", async () => {
 test("init reuses an existing project id from .env.local", async () => {
   const root = await makeFixture();
   try {
-    await writeFile(join(root, ".env.local"), "WHOOPS_PROJECT_ID=wh_existing_id_12345\nOTHER_VAR=foo\n");
+    await writeFile(join(root, ".env.local"), "WHOOPSIE_PROJECT_ID=ws_existing_id_12345\nOTHER_VAR=foo\n");
 
     const log = console.log;
     console.log = () => {};
@@ -140,7 +140,7 @@ test("init reuses an existing project id from .env.local", async () => {
     }
 
     const env = await readFile(join(root, ".env.local"), "utf8");
-    assert.match(env, /WHOOPS_PROJECT_ID=wh_existing_id_12345/);
+    assert.match(env, /WHOOPSIE_PROJECT_ID=ws_existing_id_12345/);
     assert.match(env, /OTHER_VAR=foo/);
   } finally {
     await rm(root, { recursive: true, force: true });

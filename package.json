@@ -1,5 +1,5 @@
 {
-  "name": "whoops",
+  "name": "whoopsie",
   "private": true,
   "version": "0.0.0",
   "description": "See your AI app's failures live. Free forever.",
@@ -9,10 +9,10 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm --filter @whoops/web dev",
-    "start": "pnpm --filter @whoops/web start",
+    "dev": "pnpm --filter @whoopsie/web dev",
+    "start": "pnpm --filter @whoopsie/web start",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @whoops/detectors test && pnpm --filter @whoops/sdk test && pnpm --filter @whoops/cli test && pnpm --filter @whoops/web test",
+    "test": "pnpm --filter @whoopsie/detectors test && pnpm --filter @whoopsie/sdk test && pnpm --filter @whoopsie/cli test && pnpm --filter @whoopsie/web test",
     "smoke": "./scripts/smoke.sh",
     "release": "pnpm -r --filter ./packages/* publish --access public --no-git-checks"
   },

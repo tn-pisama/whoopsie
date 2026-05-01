@@ -69,17 +69,17 @@ export class MemoryStore implements Store {
   }
 }
 
-const NOTIFY_CHANNEL = "whoops_traces";
+const NOTIFY_CHANNEL = "whoopsie_traces";
 
 const MIGRATION = `
-  CREATE TABLE IF NOT EXISTS whoops_traces (
+  CREATE TABLE IF NOT EXISTS whoopsie_traces (
     id BIGSERIAL PRIMARY KEY,
     project_id TEXT NOT NULL,
     payload JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
-  CREATE INDEX IF NOT EXISTS whoops_traces_proj_time_idx
-    ON whoops_traces (project_id, id DESC);
+  CREATE INDEX IF NOT EXISTS whoopsie_traces_proj_time_idx
+    ON whoopsie_traces (project_id, id DESC);
 `;
 
 interface PgNotifyPayload {
@@ -121,7 +121,7 @@ export class PostgresStore implements Store {
   async publish(projectId: string, payload: TraceWithHits): Promise<void> {
     await this.migrate();
     const insert = await this.pool.query<{ id: string }>(
-      "INSERT INTO whoops_traces (project_id, payload) VALUES ($1, $2) RETURNING id",
+      "INSERT INTO whoopsie_traces (project_id, payload) VALUES ($1, $2) RETURNING id",
       [projectId, payload],
     );
     const id = Number(insert.rows[0]!.id);
@@ -135,7 +135,7 @@ export class PostgresStore implements Store {
   async recent(projectId: string, n = 50): Promise<TraceWithHits[]> {
     await this.migrate();
     const res = await this.pool.query<{ payload: TraceWithHits }>(
-      "SELECT payload FROM whoops_traces WHERE project_id = $1 ORDER BY id DESC LIMIT $2",
+      "SELECT payload FROM whoopsie_traces WHERE project_id = $1 ORDER BY id DESC LIMIT $2",
       [projectId, n],
     );
     // Return chronological order (oldest -> newest) to match MemoryStore.
@@ -209,7 +209,7 @@ export class PostgresStore implements Store {
     if (!pending) {
       pending = this.pool
         .query<{ payload: TraceWithHits }>(
-          "SELECT payload FROM whoops_traces WHERE id = $1",
+          "SELECT payload FROM whoopsie_traces WHERE id = $1",
           [id],
         )
         .then((r) => r.rows[0]?.payload ?? null)
@@ -246,7 +246,7 @@ export async function getStore(): Promise<Store> {
 }
 
 async function createStore(): Promise<Store> {
-  const url = process.env.WHOOPS_DATABASE_URL;
+  const url = process.env.WHOOPSIE_DATABASE_URL;
   if (!url) return new MemoryStore();
   return PostgresStore.connect(url);
 }

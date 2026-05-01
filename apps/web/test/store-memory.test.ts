@@ -5,7 +5,7 @@ import type { TraceWithHits } from "../lib/types";
 
 const evt = (id: string): TraceWithHits => ({
   event: {
-    projectId: "wh_mem",
+    projectId: "ws_mem",
     traceId: id,
     spanId: id,
     startTime: 0,
@@ -19,9 +19,9 @@ const evt = (id: string): TraceWithHits => ({
 
 test("MemoryStore: publish + recent", async () => {
   const store = new MemoryStore();
-  await store.publish("wh_mem", evt("a"));
-  await store.publish("wh_mem", evt("b"));
-  const r = await store.recent("wh_mem");
+  await store.publish("ws_mem", evt("a"));
+  await store.publish("ws_mem", evt("b"));
+  const r = await store.recent("ws_mem");
   assert.equal(r.length, 2);
   assert.equal(r[0]!.event.traceId, "a");
   assert.equal(r[1]!.event.traceId, "b");
@@ -30,22 +30,22 @@ test("MemoryStore: publish + recent", async () => {
 test("MemoryStore: subscribe receives published events", async () => {
   const store = new MemoryStore();
   const seen: string[] = [];
-  const unsub = await store.subscribe("wh_mem2", (p) => {
+  const unsub = await store.subscribe("ws_mem2", (p) => {
     seen.push(p.event.traceId);
   });
-  await store.publish("wh_mem2", evt("x"));
-  await store.publish("wh_mem2", evt("y"));
+  await store.publish("ws_mem2", evt("x"));
+  await store.publish("ws_mem2", evt("y"));
   unsub();
-  await store.publish("wh_mem2", evt("z"));
+  await store.publish("ws_mem2", evt("z"));
   assert.deepEqual(seen, ["x", "y"]);
 });
 
 test("MemoryStore: project isolation", async () => {
   const store = new MemoryStore();
-  await store.publish("wh_a", evt("1"));
-  await store.publish("wh_b", evt("2"));
-  const a = await store.recent("wh_a");
-  const b = await store.recent("wh_b");
+  await store.publish("ws_a", evt("1"));
+  await store.publish("ws_b", evt("2"));
+  const a = await store.recent("ws_a");
+  const b = await store.recent("ws_b");
   assert.equal(a.length, 1);
   assert.equal(a[0]!.event.traceId, "1");
   assert.equal(b.length, 1);

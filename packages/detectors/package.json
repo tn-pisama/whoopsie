@@ -1,5 +1,5 @@
 {
-  "name": "@whoops/detectors",
+  "name": "@whoopsie/detectors",
   "version": "0.0.1",
   "description": "TypeScript-native failure detectors for AI agent traces.",
   "type": "module",

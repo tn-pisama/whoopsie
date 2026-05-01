@@ -1,14 +1,14 @@
 import { GeistMono } from "geist/font/mono";
 import { CopyButton } from "@/components/copy-button";
 
-const INSTALL = "npx @whoops/cli init";
+const INSTALL = "npx @whoopsie/cli init";
 
 const CODE_SAMPLE = `import { wrapLanguageModel, streamText } from "ai";
-import { whoopsMiddleware } from "@whoops/sdk";
+import { whoopsieMiddleware } from "@whoopsie/sdk";
 
 const model = wrapLanguageModel({
   model: openai("gpt-4o"),
-  middleware: whoopsMiddleware(),
+  middleware: whoopsieMiddleware(),
 });
 
 await streamText({ model, prompt: "..." });`;
@@ -18,13 +18,13 @@ export default function LandingPage() {
     <main className="mx-auto max-w-3xl px-6">
       <header className="flex items-center justify-between py-8">
         <span className={`${GeistMono.className} text-lg lowercase tracking-tight`}>
-          whoops
+          whoopsie
         </span>
         <nav className="flex items-center gap-6 font-mono text-xs text-ink-muted">
-          <a href="https://github.com/whoops-dev/whoops" className="hover:text-ink">
+          <a href="https://github.com/whoopsie-dev/whoopsie" className="hover:text-ink">
             github
           </a>
-          <a href="https://www.npmjs.com/package/@whoops/sdk" className="hover:text-ink">
+          <a href="https://www.npmjs.com/package/@whoopsie/sdk" className="hover:text-ink">
             npm
           </a>
         </nav>
@@ -75,7 +75,7 @@ export default function LandingPage() {
           <Step
             n={1}
             title="Install"
-            body="`npx @whoops/cli init` detects your Next.js + AI SDK setup and patches the first streamText call."
+            body="`npx @whoopsie/cli init` detects your Next.js + AI SDK setup and patches the first streamText call."
           />
           <Step
             n={2}

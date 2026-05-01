@@ -1,9 +1,9 @@
-## @whoops/detectors
+## @whoopsie/detectors
 
 TypeScript-native failure detectors for AI agent traces. Pure functions, zero runtime dependencies, no LLM calls.
 
 ```ts
-import { runDetectors, v1Detectors } from "@whoops/detectors";
+import { runDetectors, v1Detectors } from "@whoopsie/detectors";
 
 const hits = runDetectors({
   traceId: "t1",
@@ -29,7 +29,7 @@ The v1 pack ports a subset of the [Pisama](https://pisama.ai) detector library t
 ### Adding a detector
 
 ```ts
-import type { Detector } from "@whoops/detectors";
+import type { Detector } from "@whoopsie/detectors";
 
 export const myDetector: Detector = {
   name: "my_detector",

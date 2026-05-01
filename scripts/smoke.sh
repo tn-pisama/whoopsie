@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 BASE=${BASE:-http://localhost:3030}
-PROJ="wh_smoketest"
+PROJ="ws_smoketest"
 NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
 
 echo "=== 1. Landing page ==="
@@ -13,7 +13,7 @@ curl -s -o /dev/null -w "GET /live/$PROJ -> %{http_code}\n" "$BASE/live/$PROJ"
 echo "=== 3. POST a clean event (no detections expected) ==="
 curl -s -X POST "$BASE/api/v1/spans" \
   -H "Content-Type: application/json" \
-  -H "X-Whoops-Project-Id: $PROJ" \
+  -H "X-Whoopsie-Project-Id: $PROJ" \
   -d "{
     \"events\": [{
       \"projectId\": \"$PROJ\",
@@ -36,7 +36,7 @@ echo ""
 echo "=== 4. POST a loop event (should fire loop detector) ==="
 curl -s -X POST "$BASE/api/v1/spans" \
   -H "Content-Type: application/json" \
-  -H "X-Whoops-Project-Id: $PROJ" \
+  -H "X-Whoopsie-Project-Id: $PROJ" \
   -d "{
     \"events\": [{
       \"projectId\": \"$PROJ\",
@@ -66,7 +66,7 @@ echo ""
 echo "=== 5. POST a cost-spike event ==="
 curl -s -X POST "$BASE/api/v1/spans" \
   -H "Content-Type: application/json" \
-  -H "X-Whoops-Project-Id: $PROJ" \
+  -H "X-Whoopsie-Project-Id: $PROJ" \
   -d "{
     \"events\": [{
       \"projectId\": \"$PROJ\",
