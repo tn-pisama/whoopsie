@@ -54,6 +54,12 @@ export default function LandingPage() {
           >
             get the prompt →
           </a>
+          <a
+            href="/demo"
+            className={`${GeistMono.className} inline-flex items-center rounded-md border border-line bg-white px-5 py-2.5 text-sm text-ink-soft transition hover:border-coral hover:text-coral`}
+          >
+            try the demo →
+          </a>
           <span className="text-sm text-ink-muted">no terminal, no signup</span>
         </div>
         <p className="mt-3 font-mono text-xs text-ink-muted">
@@ -188,6 +194,8 @@ export default function LandingPage() {
         <p>MIT-licensed SDK. Hosted dashboard free forever.</p>
         <p className="mt-2">No accounts. No metering. No upsell. Pre-alpha.</p>
         <p className="mt-3">
+          <a href="/demo" className="hover:text-ink">demo</a>
+          {" · "}
           <a href="/privacy" className="hover:text-ink">privacy</a>
           {" · "}
           <a href="https://github.com/tn-pisama/whoopsie" className="hover:text-ink">github</a>
