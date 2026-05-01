@@ -1,0 +1,20 @@
+{
+  "name": "@whoopsie/synth",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Synthetic agents that mimic real users hitting the whoopsie.dev ingest. One persona per detector + a clean baseline.",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/run.ts",
+    "once": "tsx src/run.ts --once",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
