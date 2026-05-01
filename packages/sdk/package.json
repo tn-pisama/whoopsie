@@ -47,6 +47,10 @@
   "homepage": "https://whoopsie.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/whoopsie-dev/whoopsie"
+    "url": "https://github.com/tn-pisama/whoopsie",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/tn-pisama/whoopsie/issues"
   }
 }

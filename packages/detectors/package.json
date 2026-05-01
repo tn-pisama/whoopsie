@@ -26,5 +26,19 @@
     "typescript": "^5.6.0"
   },
   "license": "MIT",
-  "keywords": ["ai", "agent", "failure-detection", "observability"]
+  "keywords": [
+    "ai",
+    "agent",
+    "failure-detection",
+    "observability"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tn-pisama/whoopsie",
+    "directory": "packages/detectors"
+  },
+  "homepage": "https://whoopsie.dev",
+  "bugs": {
+    "url": "https://github.com/tn-pisama/whoopsie/issues"
+  }
 }
