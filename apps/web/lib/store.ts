@@ -2,6 +2,13 @@ import { EventEmitter } from "node:events";
 import type { TraceWithHits } from "./types";
 import type { Pool, PoolClient } from "pg";
 
+export interface ContactRecord {
+  projectId: string;
+  email: string;
+  source: string;
+  createdAt: number;
+}
+
 export interface Store {
   publish(projectId: string, payload: TraceWithHits): Promise<void>;
   recent(projectId: string, n?: number): Promise<TraceWithHits[]>;
@@ -9,6 +16,7 @@ export interface Store {
     projectId: string,
     listener: (payload: TraceWithHits) => void,
   ): Promise<() => void>;
+  saveContact(record: ContactRecord): Promise<{ created: boolean }>;
   close?(): Promise<void>;
 }
 
@@ -35,6 +43,7 @@ interface MemoryChannel {
 
 export class MemoryStore implements Store {
   private channels = new Map<string, MemoryChannel>();
+  private contacts = new Map<string, ContactRecord>();
 
   private channelFor(projectId: string): MemoryChannel {
     let ch = this.channels.get(projectId);
@@ -67,6 +76,18 @@ export class MemoryStore implements Store {
       ch.emitter.off("trace", listener);
     };
   }
+
+  async saveContact(record: ContactRecord): Promise<{ created: boolean }> {
+    const key = `${record.projectId}:${record.email.toLowerCase()}`;
+    if (this.contacts.has(key)) return { created: false };
+    this.contacts.set(key, record);
+    return { created: true };
+  }
+
+  // Used by tests + admin scripts that drive MemoryStore directly.
+  listContacts(): ContactRecord[] {
+    return Array.from(this.contacts.values());
+  }
 }
 
 const NOTIFY_CHANNEL = "whoopsie_traces";
@@ -80,6 +101,18 @@ const MIGRATION = `
   );
   CREATE INDEX IF NOT EXISTS whoopsie_traces_proj_time_idx
     ON whoopsie_traces (project_id, id DESC);
+
+  CREATE TABLE IF NOT EXISTS whoopsie_contacts (
+    id BIGSERIAL PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    source TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    opted_in_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    unsubscribed_at TIMESTAMPTZ
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS whoopsie_contacts_proj_email_idx
+    ON whoopsie_contacts (project_id, lower(email));
 `;
 
 interface PgNotifyPayload {
@@ -162,6 +195,18 @@ export class PostgresStore implements Store {
       set.delete(listener);
       if (set.size === 0) this.projectListeners.delete(projectId);
     };
+  }
+
+  async saveContact(record: ContactRecord): Promise<{ created: boolean }> {
+    await this.migrate();
+    const res = await this.pool.query<{ id: string }>(
+      `INSERT INTO whoopsie_contacts (project_id, email, source)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (project_id, lower(email)) DO NOTHING
+       RETURNING id`,
+      [record.projectId, record.email, record.source],
+    );
+    return { created: res.rows.length > 0 };
   }
 
   async close(): Promise<void> {

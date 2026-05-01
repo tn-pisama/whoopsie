@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDetectors, type AgentTrace } from "@whoopsie/detectors";
-import { publish } from "@/lib/bus";
+import { getStore, publish } from "@/lib/bus";
 import type { TraceEvent } from "@/lib/types";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// In-memory short-circuit so we don't hit the store on every event for the
+// same {projectId, email} pair. Cleared on cold start; safe.
+const seenContacts = new Set<string>();
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +62,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } catch (err) {
       console.error("[whoopsie] publish error", err);
     }
+
+    // Auto-capture contact email from SDK middleware metadata.
+    const contact =
+      typeof event.metadata?.contact === "string"
+        ? event.metadata.contact.trim().toLowerCase()
+        : "";
+    if (contact && EMAIL_RE.test(contact)) {
+      const cacheKey = `${projectId}:${contact}`;
+      if (!seenContacts.has(cacheKey)) {
+        seenContacts.add(cacheKey);
+        try {
+          const store = await getStore();
+          await store.saveContact({
+            projectId,
+            email: contact,
+            source: "sdk_middleware",
+            createdAt: Date.now(),
+          });
+        } catch (err) {
+          console.error("[whoopsie] saveContact error", err);
+          seenContacts.delete(cacheKey);
+        }
+      }
+    }
+
     detections.push({ traceId: event.traceId, hits });
   }
 

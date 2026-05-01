@@ -8,6 +8,7 @@ Status as of 2026-04-30:
 - ✅ Live at https://whoopsie.dev/ and https://www.whoopsie.dev/. Smoke-tested in prod: POST `/api/v1/spans` accepted a 5x `web_search` loop event, loop detector fired severity=50.
 - ⏳ npm `@whoopsie/*` scope unclaimed — see step 1 below.
 - ⏳ GitHub `whoopsie-dev` org unclaimed — see step 3 below.
+- ⏳ **Neon Postgres for prod persistence** — see step 4 below. Without this, prod runs on `MemoryStore` and contact emails / traces vanish on cold start.
 
 ## 1. Claim the npm scope (free, ~1 minute)
 
@@ -104,7 +105,47 @@ After the push, in each `packages/*/package.json`, the `repository.url` field sh
 grep -r "repository" ~/whoopsie/packages/*/package.json
 ```
 
-## 4. Subdomains for later
+## 4. Wire Neon Postgres in prod (~3 minutes)
+
+Why it matters: prod is currently on `MemoryStore`. Every cold start of the Vercel Function loses recent traces and any contact emails captured. Wiring Postgres flips both into persistent storage automatically — `apps/web/lib/store.ts` already reads `WHOOPSIE_DATABASE_URL` and switches to `PostgresStore` (with LISTEN/NOTIFY for cross-instance fan-out).
+
+**Path A — Vercel Marketplace (recommended, free tier):**
+
+1. https://vercel.com/marketplace/neon → Add to Project → pick the `whoopsie` project.
+2. Authorize Neon (one-click if you have a Neon account, signup is free).
+3. Vercel auto-injects `DATABASE_URL` (and a few others) as env vars.
+4. Add an alias so our code finds it:
+   ```bash
+   vercel env add WHOOPSIE_DATABASE_URL production
+   # paste the value of DATABASE_URL when prompted
+   ```
+   (or in Vercel UI: Project → Settings → Environment Variables → Add → name `WHOOPSIE_DATABASE_URL`, value = the Neon connection string from the Neon integration page.)
+5. Redeploy: `vercel deploy --prod --yes`. The migration in `store.ts` auto-runs on first connection and creates `whoopsie_traces` + `whoopsie_contacts`.
+
+**Path B — Neon directly:**
+
+1. https://console.neon.tech → New Project → free tier.
+2. Copy the connection string from the Neon dashboard (look for "pooled" connection, with `?sslmode=require`).
+3. `vercel env add WHOOPSIE_DATABASE_URL production` and paste.
+4. Redeploy.
+
+**Verify after deploy:**
+
+```bash
+# fire one event
+curl -s -X POST https://whoopsie.dev/api/v1/contact \
+  -H "content-type: application/json" \
+  -d '{"projectId":"ws_test","email":"you@yourdomain.com","source":"manual"}'
+
+# pull the env locally and dump contacts
+vercel env pull .env.local
+WHOOPSIE_DATABASE_URL=$(grep WHOOPSIE_DATABASE_URL .env.local | cut -d= -f2- | tr -d '"') \
+  pnpm contacts:list
+```
+
+You should see a single row with the project_id + email you posted.
+
+## 5. Subdomains for later
 
 - `ingest.whoopsie.dev` — when we split ingest off the main app
 - `api.whoopsie.dev` — public API

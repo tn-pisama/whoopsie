@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GeistMono } from "geist/font/mono";
 import { CopyBlock } from "./copy-block";
+import { EmailCapture } from "./email-capture";
 
 interface PlatformView {
   slug: string;
@@ -73,6 +74,9 @@ export function InstallTabs({
         <p className="mt-2 font-mono text-xs text-ink-muted">
           project id: {projectId}
         </p>
+        <div className="mt-5 border-t border-line pt-4">
+          <EmailCapture projectId={projectId} source="install_page" />
+        </div>
       </div>
     </div>
   );

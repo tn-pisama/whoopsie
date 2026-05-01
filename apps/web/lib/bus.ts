@@ -1,3 +1,4 @@
+export { getStore } from "./store";
 import { getStore } from "./store";
 import type { TraceWithHits } from "./types";
 

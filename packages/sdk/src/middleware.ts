@@ -9,6 +9,11 @@ export interface WhoopsieMiddlewareOptions {
   redact?: RedactMode;
   enabled?: boolean;
   exporter?: TraceExporter;
+  /**
+   * Optional contact email. Embedded into each TraceEvent's `metadata.contact`
+   * so the dashboard can ping you when whoopsie ships paid alerts. Opt-in.
+   */
+  contact?: string;
 }
 
 interface ModelLike {
@@ -99,6 +104,10 @@ export function whoopsieMiddleware(
 
   const exporter =
     opts.exporter ?? new TraceExporter({ projectId, endpoint: opts.endpoint });
+  const baseMetadata: Record<string, unknown> = {};
+  if (opts.contact && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(opts.contact)) {
+    baseMetadata.contact = opts.contact;
+  }
 
   return {
     specificationVersion: "v3",
@@ -120,6 +129,7 @@ export function whoopsieMiddleware(
             params,
             result,
             redactMode,
+            metadata: baseMetadata,
           }),
         );
         return result;
@@ -135,6 +145,7 @@ export function whoopsieMiddleware(
             params,
             error,
             redactMode,
+            metadata: baseMetadata,
           }),
         );
         throw error;
@@ -161,6 +172,7 @@ export function whoopsieMiddleware(
             params,
             error,
             redactMode,
+            metadata: baseMetadata,
           }),
         );
         throw error;
@@ -190,6 +202,7 @@ export function whoopsieMiddleware(
               params,
               collected,
               redactMode,
+              metadata: baseMetadata,
             }),
           );
         },
@@ -245,6 +258,7 @@ interface BuildArgs {
   model: ModelLike;
   params: ParamsLike;
   redactMode: RedactMode;
+  metadata: Record<string, unknown>;
 }
 
 function buildFromGenerate(
@@ -277,7 +291,7 @@ function buildFromGenerate(
     inputTokens: result.usage?.inputTokens?.total,
     outputTokens: result.usage?.outputTokens?.total,
     finishReason: result.finishReason,
-    metadata: {},
+    metadata: { ...rest.metadata },
   };
 }
 
@@ -300,7 +314,7 @@ function buildFromStream(
     inputTokens: collected.usage?.inputTokens?.total,
     outputTokens: collected.usage?.outputTokens?.total,
     finishReason: collected.finishReason,
-    metadata: {},
+    metadata: { ...rest.metadata },
   };
 }
 
@@ -316,7 +330,7 @@ function buildErrorEvent(args: BuildArgs & { error: unknown }): TraceEvent {
     prompt: extractPromptStr(args.params, args.redactMode),
     toolCalls: [],
     error: { message: err?.message ?? "unknown", name: err?.name },
-    metadata: {},
+    metadata: { ...args.metadata },
   };
 }
 

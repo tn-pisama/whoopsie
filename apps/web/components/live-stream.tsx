@@ -11,6 +11,7 @@ import {
   truncate,
 } from "@/lib/format";
 import { detectorCopy } from "@/lib/detector-copy";
+import { EmailCapture } from "./email-capture";
 import { PulseDot } from "./pulse-dot";
 
 type Status = "connecting" | "live" | "reconnecting" | "error";
@@ -135,6 +136,13 @@ function EmptyState({
       >
         haven&apos;t installed yet? get the prompt →
       </a>
+      <div className="mt-6 w-full max-w-sm rounded-md border border-line bg-white p-4 text-left">
+        <EmailCapture
+          projectId={projectId}
+          source="dashboard_empty"
+          copy="Want a ping when whoopsie ships paid alerts? Drop your email."
+        />
+      </div>
       {status !== "live" && status !== "connecting" && (
         <p className="font-mono text-xs text-ink-muted">
           stream status: {status}
