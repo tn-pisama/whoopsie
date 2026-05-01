@@ -15,7 +15,7 @@ export async function GET(
   const { projectId } = await ctx.params;
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
       const send = (event: string, data: unknown): void => {
         const payload =
           `event: ${event}\n` +
@@ -27,13 +27,13 @@ export async function GET(
         }
       };
 
-      const recentBuffer = recent(projectId, 50);
+      const recentBuffer = await recent(projectId, 50);
       send("hello", { projectId, recent: recentBuffer });
 
       const onTrace = (payload: TraceWithHits): void => {
         send("trace", payload);
       };
-      const unsubscribe = subscribe(projectId, onTrace);
+      const unsubscribe = await subscribe(projectId, onTrace);
 
       const heartbeat = setInterval(() => {
         send("heartbeat", { t: Date.now() });
@@ -49,7 +49,6 @@ export async function GET(
         }
       };
 
-      // Note: AbortSignal hookup happens via the request below.
       _req.signal.addEventListener("abort", close);
     },
   });

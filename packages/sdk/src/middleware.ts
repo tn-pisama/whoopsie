@@ -8,24 +8,75 @@ export interface WhoopsMiddlewareOptions {
   endpoint?: string;
   redact?: RedactMode;
   enabled?: boolean;
+  exporter?: TraceExporter;
 }
 
-interface LanguageModelMiddleware {
-  wrapGenerate?: (args: {
-    doGenerate: () => Promise<unknown>;
-    params: unknown;
-    model: { modelId: string };
-  }) => Promise<unknown>;
-  wrapStream?: (args: {
-    doStream: () => Promise<{ stream: ReadableStream<unknown> }>;
-    params: unknown;
-    model: { modelId: string };
-  }) => Promise<{ stream: ReadableStream<unknown> }>;
+interface ModelLike {
+  modelId?: string;
+  provider?: string;
+}
+
+interface ParamsLike {
+  prompt?: unknown;
+  messages?: unknown;
+}
+
+interface UsageLike {
+  inputTokens?: { total?: number };
+  outputTokens?: { total?: number };
+}
+
+interface ContentPartLike {
+  type: string;
+  text?: string;
+  toolCallId?: string;
+  toolName?: string;
+  input?: string;
+}
+
+interface GenerateResultLike {
+  content?: ContentPartLike[];
+  finishReason?: string;
+  usage?: UsageLike;
+}
+
+interface StreamPartLike {
+  type: string;
+  delta?: string;
+  toolCallId?: string;
+  toolName?: string;
+  input?: string;
+  finishReason?: string;
+  usage?: UsageLike;
+}
+
+interface MiddlewareWrapGenerateArgs {
+  doGenerate: () => PromiseLike<GenerateResultLike>;
+  doStream: () => PromiseLike<{ stream: ReadableStream<StreamPartLike> }>;
+  params: ParamsLike;
+  model: ModelLike;
+}
+
+interface MiddlewareWrapStreamArgs {
+  doGenerate: () => PromiseLike<GenerateResultLike>;
+  doStream: () => PromiseLike<{ stream: ReadableStream<StreamPartLike> }>;
+  params: ParamsLike;
+  model: ModelLike;
+}
+
+export interface WhoopsLanguageModelMiddleware {
+  readonly specificationVersion: "v3";
+  wrapGenerate: (
+    args: MiddlewareWrapGenerateArgs,
+  ) => Promise<GenerateResultLike>;
+  wrapStream: (
+    args: MiddlewareWrapStreamArgs,
+  ) => Promise<{ stream: ReadableStream<StreamPartLike> }>;
 }
 
 export function whoopsMiddleware(
   opts: WhoopsMiddlewareOptions = {},
-): LanguageModelMiddleware {
+): WhoopsLanguageModelMiddleware {
   const projectId =
     opts.projectId ??
     (typeof process !== "undefined" ? process.env.WHOOPS_PROJECT_ID : undefined);
@@ -33,27 +84,39 @@ export function whoopsMiddleware(
   const enabled = opts.enabled !== false && Boolean(projectId);
   const redactMode: RedactMode = opts.redact ?? "standard";
 
+  const noopGenerate = async ({ doGenerate }: MiddlewareWrapGenerateArgs) =>
+    doGenerate();
+  const noopStream = async ({ doStream }: MiddlewareWrapStreamArgs) =>
+    doStream();
+
   if (!enabled || !projectId) {
-    return {};
+    return {
+      specificationVersion: "v3",
+      wrapGenerate: noopGenerate,
+      wrapStream: noopStream,
+    };
   }
 
-  const exporter = new TraceExporter({ projectId, endpoint: opts.endpoint });
+  const exporter =
+    opts.exporter ?? new TraceExporter({ projectId, endpoint: opts.endpoint });
 
   return {
-    wrapGenerate: async ({ doGenerate, params, model }) => {
+    specificationVersion: "v3",
+
+    async wrapGenerate({ doGenerate, params, model }) {
       const traceId = nanoid();
       const spanId = nanoid();
       const startTime = Date.now();
       try {
-        const result = (await doGenerate()) as Record<string, unknown>;
+        const result = await doGenerate();
         exporter.enqueue(
-          buildTraceEvent({
+          buildFromGenerate({
             projectId,
             traceId,
             spanId,
             startTime,
             endTime: Date.now(),
-            model: model.modelId,
+            model,
             params,
             result,
             redactMode,
@@ -68,7 +131,7 @@ export function whoopsMiddleware(
             spanId,
             startTime,
             endTime: Date.now(),
-            model: model.modelId,
+            model,
             params,
             error,
             redactMode,
@@ -77,31 +140,53 @@ export function whoopsMiddleware(
         throw error;
       }
     },
-    wrapStream: async ({ doStream, params, model }) => {
+
+    async wrapStream({ doStream, params, model }) {
       const traceId = nanoid();
       const spanId = nanoid();
       const startTime = Date.now();
-      const { stream } = await doStream();
 
-      const collected: { text: string; toolCalls: ToolCall[] } = {
+      let upstream: { stream: ReadableStream<StreamPartLike> };
+      try {
+        upstream = await doStream();
+      } catch (error) {
+        exporter.enqueue(
+          buildErrorEvent({
+            projectId,
+            traceId,
+            spanId,
+            startTime,
+            endTime: Date.now(),
+            model,
+            params,
+            error,
+            redactMode,
+          }),
+        );
+        throw error;
+      }
+
+      const collected: StreamCollector = {
         text: "",
         toolCalls: [],
+        usage: undefined,
+        finishReason: undefined,
       };
 
-      const tap = new TransformStream<unknown, unknown>({
+      const tap = new TransformStream<StreamPartLike, StreamPartLike>({
         transform(chunk, controller) {
           collectChunk(chunk, collected);
           controller.enqueue(chunk);
         },
         flush() {
           exporter.enqueue(
-            buildTraceEventFromStream({
+            buildFromStream({
               projectId,
               traceId,
               spanId,
               startTime,
               endTime: Date.now(),
-              model: model.modelId,
+              model,
               params,
               collected,
               redactMode,
@@ -110,80 +195,116 @@ export function whoopsMiddleware(
         },
       });
 
-      return { stream: stream.pipeThrough(tap) };
+      return { stream: upstream.stream.pipeThrough(tap) };
     },
   };
 }
 
-function collectChunk(
-  chunk: unknown,
-  collected: { text: string; toolCalls: ToolCall[] },
-): void {
-  if (!chunk || typeof chunk !== "object") return;
-  const c = chunk as Record<string, unknown>;
-  if (c.type === "text-delta" && typeof c.textDelta === "string") {
-    collected.text += c.textDelta;
-  } else if (c.type === "tool-call") {
-    collected.toolCalls.push({
-      toolCallId: String(c.toolCallId ?? ""),
-      toolName: String(c.toolName ?? ""),
-      args: c.args,
+interface StreamCollector {
+  text: string;
+  toolCalls: ToolCall[];
+  usage: UsageLike | undefined;
+  finishReason: string | undefined;
+}
+
+function collectChunk(chunk: StreamPartLike, c: StreamCollector): void {
+  if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
+    c.text += chunk.delta;
+    return;
+  }
+  if (chunk.type === "tool-call") {
+    c.toolCalls.push({
+      toolCallId: String(chunk.toolCallId ?? ""),
+      toolName: String(chunk.toolName ?? ""),
+      args: parseJson(chunk.input),
       startTime: Date.now(),
     });
+    return;
+  }
+  if (chunk.type === "finish") {
+    if (typeof chunk.finishReason === "string") c.finishReason = chunk.finishReason;
+    if (chunk.usage) c.usage = chunk.usage;
   }
 }
 
-interface BuildEventArgs {
+function parseJson(s: string | undefined): unknown {
+  if (!s) return undefined;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return s;
+  }
+}
+
+interface BuildArgs {
   projectId: string;
   traceId: string;
   spanId: string;
   startTime: number;
   endTime: number;
-  model: string;
-  params: unknown;
+  model: ModelLike;
+  params: ParamsLike;
   redactMode: RedactMode;
 }
 
-function buildTraceEvent(
-  args: BuildEventArgs & { result: Record<string, unknown> },
+function buildFromGenerate(
+  args: BuildArgs & { result: GenerateResultLike },
 ): TraceEvent {
-  const { result, ...rest } = args;
-  const usage = (result.usage ?? {}) as Record<string, number>;
+  const { result, model, ...rest } = args;
+  const text = (result.content ?? [])
+    .filter((c): c is ContentPartLike & { text: string } => c.type === "text" && typeof c.text === "string")
+    .map((c) => c.text)
+    .join("");
+  const toolCalls: ToolCall[] = (result.content ?? [])
+    .filter((c) => c.type === "tool-call")
+    .map((c) => ({
+      toolCallId: String(c.toolCallId ?? ""),
+      toolName: String(c.toolName ?? ""),
+      args: parseJson(c.input),
+      startTime: rest.startTime,
+    }));
+
   return {
     projectId: rest.projectId,
     traceId: rest.traceId,
     spanId: rest.spanId,
     startTime: rest.startTime,
     endTime: rest.endTime,
-    model: rest.model,
-    prompt: extractPrompt(rest.params, rest.redactMode),
-    completion: redactObject(asString(result.text), rest.redactMode),
-    toolCalls: extractToolCalls(result.toolCalls),
-    inputTokens: usage.promptTokens ?? usage.inputTokens,
-    outputTokens: usage.completionTokens ?? usage.outputTokens,
-    finishReason: asString(result.finishReason),
+    model: model.modelId ?? "",
+    prompt: extractPromptStr(rest.params, rest.redactMode),
+    completion: text ? redactObject(text, rest.redactMode) : undefined,
+    toolCalls,
+    inputTokens: result.usage?.inputTokens?.total,
+    outputTokens: result.usage?.outputTokens?.total,
+    finishReason: result.finishReason,
     metadata: {},
   };
 }
 
-function buildTraceEventFromStream(args: BuildEventArgs & {
-  collected: { text: string; toolCalls: ToolCall[] };
-}): TraceEvent {
+function buildFromStream(
+  args: BuildArgs & { collected: StreamCollector },
+): TraceEvent {
+  const { collected, model, ...rest } = args;
   return {
-    projectId: args.projectId,
-    traceId: args.traceId,
-    spanId: args.spanId,
-    startTime: args.startTime,
-    endTime: args.endTime,
-    model: args.model,
-    prompt: extractPrompt(args.params, args.redactMode),
-    completion: redactObject(args.collected.text, args.redactMode),
-    toolCalls: args.collected.toolCalls,
+    projectId: rest.projectId,
+    traceId: rest.traceId,
+    spanId: rest.spanId,
+    startTime: rest.startTime,
+    endTime: rest.endTime,
+    model: model.modelId ?? "",
+    prompt: extractPromptStr(rest.params, rest.redactMode),
+    completion: collected.text
+      ? redactObject(collected.text, rest.redactMode)
+      : undefined,
+    toolCalls: collected.toolCalls,
+    inputTokens: collected.usage?.inputTokens?.total,
+    outputTokens: collected.usage?.outputTokens?.total,
+    finishReason: collected.finishReason,
     metadata: {},
   };
 }
 
-function buildErrorEvent(args: BuildEventArgs & { error: unknown }): TraceEvent {
+function buildErrorEvent(args: BuildArgs & { error: unknown }): TraceEvent {
   const err = args.error as { message?: string; name?: string };
   return {
     projectId: args.projectId,
@@ -191,35 +312,19 @@ function buildErrorEvent(args: BuildEventArgs & { error: unknown }): TraceEvent 
     spanId: args.spanId,
     startTime: args.startTime,
     endTime: args.endTime,
-    model: args.model,
-    prompt: extractPrompt(args.params, args.redactMode),
+    model: args.model.modelId ?? "",
+    prompt: extractPromptStr(args.params, args.redactMode),
     toolCalls: [],
     error: { message: err?.message ?? "unknown", name: err?.name },
     metadata: {},
   };
 }
 
-function extractPrompt(params: unknown, mode: RedactMode): string | undefined {
-  if (!params || typeof params !== "object") return undefined;
-  const p = params as Record<string, unknown>;
-  const prompt = p.prompt ?? p.messages;
-  if (!prompt) return undefined;
-  return redactObject(JSON.stringify(prompt), mode);
-}
-
-function extractToolCalls(value: unknown): ToolCall[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((tc) => {
-    const c = tc as Record<string, unknown>;
-    return {
-      toolCallId: String(c.toolCallId ?? ""),
-      toolName: String(c.toolName ?? ""),
-      args: c.args,
-      startTime: Date.now(),
-    };
-  });
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
+function extractPromptStr(
+  params: ParamsLike,
+  mode: RedactMode,
+): string | undefined {
+  const value = params.prompt ?? params.messages;
+  if (value == null) return undefined;
+  return redactObject(JSON.stringify(value), mode);
 }

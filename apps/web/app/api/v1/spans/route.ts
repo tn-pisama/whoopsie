@@ -42,6 +42,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       inputTokens: event.inputTokens,
       outputTokens: event.outputTokens,
       costUsd: event.costUsd,
+      finishReason: event.finishReason,
     };
 
     let hits: ReturnType<typeof runDetectors> = [];
@@ -51,7 +52,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       console.error("[whoops] detector error", err);
     }
 
-    publish(projectId, { event, hits });
+    try {
+      await publish(projectId, { event, hits });
+    } catch (err) {
+      console.error("[whoops] publish error", err);
+    }
     detections.push({ traceId: event.traceId, hits });
   }
 

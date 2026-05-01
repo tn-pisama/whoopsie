@@ -1,0 +1,257 @@
+import { EventEmitter } from "node:events";
+import type { TraceWithHits } from "./types";
+import type { Pool, PoolClient } from "pg";
+
+export interface Store {
+  publish(projectId: string, payload: TraceWithHits): Promise<void>;
+  recent(projectId: string, n?: number): Promise<TraceWithHits[]>;
+  subscribe(
+    projectId: string,
+    listener: (payload: TraceWithHits) => void,
+  ): Promise<() => void>;
+  close?(): Promise<void>;
+}
+
+const RING_CAPACITY = 200;
+
+class RingBuffer<T> {
+  private items: T[] = [];
+  constructor(private readonly cap: number) {}
+  push(item: T): void {
+    this.items.push(item);
+    if (this.items.length > this.cap) {
+      this.items.splice(0, this.items.length - this.cap);
+    }
+  }
+  recent(n = this.cap): T[] {
+    return this.items.slice(-n);
+  }
+}
+
+interface MemoryChannel {
+  buffer: RingBuffer<TraceWithHits>;
+  emitter: EventEmitter;
+}
+
+export class MemoryStore implements Store {
+  private channels = new Map<string, MemoryChannel>();
+
+  private channelFor(projectId: string): MemoryChannel {
+    let ch = this.channels.get(projectId);
+    if (!ch) {
+      const emitter = new EventEmitter();
+      emitter.setMaxListeners(0);
+      ch = { buffer: new RingBuffer(RING_CAPACITY), emitter };
+      this.channels.set(projectId, ch);
+    }
+    return ch;
+  }
+
+  async publish(projectId: string, payload: TraceWithHits): Promise<void> {
+    const ch = this.channelFor(projectId);
+    ch.buffer.push(payload);
+    ch.emitter.emit("trace", payload);
+  }
+
+  async recent(projectId: string, n = RING_CAPACITY): Promise<TraceWithHits[]> {
+    return this.channelFor(projectId).buffer.recent(n);
+  }
+
+  async subscribe(
+    projectId: string,
+    listener: (payload: TraceWithHits) => void,
+  ): Promise<() => void> {
+    const ch = this.channelFor(projectId);
+    ch.emitter.on("trace", listener);
+    return () => {
+      ch.emitter.off("trace", listener);
+    };
+  }
+}
+
+const NOTIFY_CHANNEL = "whoops_traces";
+
+const MIGRATION = `
+  CREATE TABLE IF NOT EXISTS whoops_traces (
+    id BIGSERIAL PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS whoops_traces_proj_time_idx
+    ON whoops_traces (project_id, id DESC);
+`;
+
+interface PgNotifyPayload {
+  projectId: string;
+  id: number;
+}
+
+export class PostgresStore implements Store {
+  private pool: Pool;
+  private migrationPromise: Promise<void> | null = null;
+  private listenerClient: PoolClient | null = null;
+  private listenerInstalled = false;
+  private projectListeners = new Map<
+    string,
+    Set<(payload: TraceWithHits) => void>
+  >();
+  private pendingFetches = new Map<number, Promise<TraceWithHits | null>>();
+
+  constructor(pool: Pool) {
+    this.pool = pool;
+  }
+
+  static async connect(databaseUrl: string): Promise<PostgresStore> {
+    const { default: pgDefault, Pool } = await import("pg");
+    const PoolCtor = (Pool ?? pgDefault.Pool) as typeof pgDefault.Pool;
+    const pool = new PoolCtor({ connectionString: databaseUrl, max: 8 });
+    const store = new PostgresStore(pool);
+    await store.migrate();
+    return store;
+  }
+
+  private migrate(): Promise<void> {
+    if (!this.migrationPromise) {
+      this.migrationPromise = this.pool.query(MIGRATION).then(() => undefined);
+    }
+    return this.migrationPromise;
+  }
+
+  async publish(projectId: string, payload: TraceWithHits): Promise<void> {
+    await this.migrate();
+    const insert = await this.pool.query<{ id: string }>(
+      "INSERT INTO whoops_traces (project_id, payload) VALUES ($1, $2) RETURNING id",
+      [projectId, payload],
+    );
+    const id = Number(insert.rows[0]!.id);
+    const notice: PgNotifyPayload = { projectId, id };
+    await this.pool.query("SELECT pg_notify($1, $2)", [
+      NOTIFY_CHANNEL,
+      JSON.stringify(notice),
+    ]);
+  }
+
+  async recent(projectId: string, n = 50): Promise<TraceWithHits[]> {
+    await this.migrate();
+    const res = await this.pool.query<{ payload: TraceWithHits }>(
+      "SELECT payload FROM whoops_traces WHERE project_id = $1 ORDER BY id DESC LIMIT $2",
+      [projectId, n],
+    );
+    // Return chronological order (oldest -> newest) to match MemoryStore.
+    return res.rows.map((r) => r.payload).reverse();
+  }
+
+  async subscribe(
+    projectId: string,
+    listener: (payload: TraceWithHits) => void,
+  ): Promise<() => void> {
+    await this.migrate();
+    await this.ensureListener();
+
+    let listeners = this.projectListeners.get(projectId);
+    if (!listeners) {
+      listeners = new Set();
+      this.projectListeners.set(projectId, listeners);
+    }
+    listeners.add(listener);
+
+    return () => {
+      const set = this.projectListeners.get(projectId);
+      if (!set) return;
+      set.delete(listener);
+      if (set.size === 0) this.projectListeners.delete(projectId);
+    };
+  }
+
+  async close(): Promise<void> {
+    if (this.listenerClient) {
+      try {
+        await this.listenerClient.query(`UNLISTEN ${NOTIFY_CHANNEL}`);
+      } catch {
+        // ignore
+      }
+      this.listenerClient.release();
+      this.listenerClient = null;
+    }
+    await this.pool.end();
+  }
+
+  private async ensureListener(): Promise<void> {
+    if (this.listenerInstalled) return;
+    this.listenerInstalled = true;
+    const client = await this.pool.connect();
+    this.listenerClient = client;
+    client.on("notification", (msg) => {
+      if (msg.channel !== NOTIFY_CHANNEL || !msg.payload) return;
+      let parsed: PgNotifyPayload;
+      try {
+        parsed = JSON.parse(msg.payload) as PgNotifyPayload;
+      } catch {
+        return;
+      }
+      const set = this.projectListeners.get(parsed.projectId);
+      if (!set || set.size === 0) return;
+      void this.fetchAndDispatch(parsed.id, set);
+    });
+    client.on("error", () => {
+      this.listenerInstalled = false;
+      this.listenerClient = null;
+    });
+    await client.query(`LISTEN ${NOTIFY_CHANNEL}`);
+  }
+
+  private fetchAndDispatch(
+    id: number,
+    listeners: Set<(payload: TraceWithHits) => void>,
+  ): Promise<void> {
+    let pending = this.pendingFetches.get(id);
+    if (!pending) {
+      pending = this.pool
+        .query<{ payload: TraceWithHits }>(
+          "SELECT payload FROM whoops_traces WHERE id = $1",
+          [id],
+        )
+        .then((r) => r.rows[0]?.payload ?? null)
+        .finally(() => {
+          this.pendingFetches.delete(id);
+        });
+      this.pendingFetches.set(id, pending);
+    }
+    return pending.then((payload) => {
+      if (!payload) return;
+      for (const listener of listeners) {
+        try {
+          listener(payload);
+        } catch {
+          // listener errors don't break the stream
+        }
+      }
+    });
+  }
+}
+
+let storeSingleton: Store | null = null;
+let storePromise: Promise<Store> | null = null;
+
+export async function getStore(): Promise<Store> {
+  if (storeSingleton) return storeSingleton;
+  if (!storePromise) {
+    storePromise = createStore().then((s) => {
+      storeSingleton = s;
+      return s;
+    });
+  }
+  return storePromise;
+}
+
+async function createStore(): Promise<Store> {
+  const url = process.env.WHOOPS_DATABASE_URL;
+  if (!url) return new MemoryStore();
+  return PostgresStore.connect(url);
+}
+
+export function resetStoreForTests(): void {
+  storeSingleton = null;
+  storePromise = null;
+}

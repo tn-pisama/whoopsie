@@ -5,6 +5,7 @@ import {
   type ObjectLiteralElementLike,
   type SourceFile,
 } from "ts-morph";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 const TARGET_NAMES = new Set(["streamText", "generateText"]);
@@ -50,7 +51,8 @@ export async function patchStreamTextCallSite(
 }
 
 function tryResolveTsConfig(root: string): string | undefined {
-  return join(root, "tsconfig.json");
+  const path = join(root, "tsconfig.json");
+  return existsSync(path) ? path : undefined;
 }
 
 function findFirstAiCall(file: SourceFile): CallExpression | undefined {

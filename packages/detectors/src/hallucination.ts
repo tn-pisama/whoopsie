@@ -1,14 +1,29 @@
 // Lite hallucination detector. NOT a substitute for an LLM judge.
 // Heuristic: when the prompt includes a Sources: block (or <sources> tags),
 // flag completion sentences whose capitalized multi-word phrases never appear
-// in any source. Low precision by design — this is the v1 vibe-coder pack.
+// in any source. Conservative: requires multiple unsupported phrases and
+// filters common geographic/brand phrases.
 
 import type { AgentTrace, Detector, DetectionResult } from "./types.js";
 import { noIssue } from "./types.js";
 
 const NAME = "hallucination";
 const MIN_PHRASE_LEN = 6;
+const MIN_TOTAL_PHRASES = 3;
+const MIN_UNSUPPORTED = 2;
+const MIN_SEVERITY = 35;
 const MAX_FLAGGED_PHRASES = 5;
+
+// Phrases that are common general knowledge and don't require source citation.
+// Lowercased; matched as a whole phrase.
+const COMMON_KNOWLEDGE = new Set([
+  "united states", "united kingdom", "european union",
+  "new york", "los angeles", "san francisco", "great britain",
+  "world war", "world war one", "world war two",
+  "north america", "south america", "middle east", "far east",
+  "silicon valley",
+  "open source", "machine learning", "artificial intelligence",
+]);
 
 export function detectHallucination(trace: AgentTrace): DetectionResult {
   const completion = (trace.completion ?? "").trim();
@@ -19,16 +34,20 @@ export function detectHallucination(trace: AgentTrace): DetectionResult {
 
   const sourceCorpus = sources.join(" ").toLowerCase();
   const phrases = extractCapPhrases(completion);
-  if (phrases.length === 0) return noIssue(NAME);
+  if (phrases.length < MIN_TOTAL_PHRASES) return noIssue(NAME);
 
-  const unsupported = phrases.filter((p) => !sourceCorpus.includes(p.toLowerCase()));
-  if (unsupported.length === 0) return noIssue(NAME);
+  const unsupported = phrases.filter((p) => {
+    const lower = p.toLowerCase();
+    if (sourceCorpus.includes(lower)) return false;
+    if (COMMON_KNOWLEDGE.has(lower)) return false;
+    return true;
+  });
+  if (unsupported.length < MIN_UNSUPPORTED) return noIssue(NAME);
 
   const flagged = unsupported.slice(0, MAX_FLAGGED_PHRASES);
   const ratio = unsupported.length / phrases.length;
   const severity = Math.min(100, Math.round(ratio * 80));
-
-  if (severity < 25) return noIssue(NAME);
+  if (severity < MIN_SEVERITY) return noIssue(NAME);
 
   return {
     detector: NAME,
@@ -58,6 +77,6 @@ function extractCapPhrases(text: string): string[] {
 
 export const hallucinationDetector: Detector = {
   name: NAME,
-  description: "Flags completion claims not supported by the prompt's sources block (heuristic, low-precision)",
+  description: "Flags completion claims not supported by the prompt's sources block (heuristic)",
   detect: detectHallucination,
 };

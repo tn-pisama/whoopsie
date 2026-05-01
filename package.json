@@ -12,8 +12,9 @@
     "dev": "pnpm --filter @whoops/web dev",
     "start": "pnpm --filter @whoops/web start",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @whoops/detectors test",
-    "smoke": "./scripts/smoke.sh"
+    "test": "pnpm --filter @whoops/detectors test && pnpm --filter @whoops/sdk test && pnpm --filter @whoops/cli test && pnpm --filter @whoops/web test",
+    "smoke": "./scripts/smoke.sh",
+    "release": "pnpm -r --filter ./packages/* publish --access public --no-git-checks"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

@@ -21,15 +21,26 @@ test("no sources block, no flag", () => {
   assert.equal(r.detected, false);
 });
 
-test("flags claim absent from sources", () => {
+test("flags multiple unsupported claims", () => {
   const r = detectHallucination(
     trace(
       "Sources: Bart Smith was the founder of Acme Corp in 1992. Acme makes paint.\n\nQ: who started Acme?",
-      "According to records, Bart Smith founded Acme Corp. The company was advised by Albert Einstein.",
+      "According to records, Bart Smith founded Acme Corp. The company was advised by Albert Einstein and Marie Curie. Their lawyer was Roger Federer.",
     ),
   );
   assert.equal(r.detected, true);
-  assert.match(r.summary, /Albert Einstein/);
+  assert.match(r.summary, /Albert Einstein|Marie Curie|Roger Federer/);
+});
+
+test("does not flag a single unsupported phrase (above threshold)", () => {
+  const r = detectHallucination(
+    trace(
+      "Sources: Bart Smith was the founder of Acme Corp in 1992. Acme makes paint.",
+      "According to records, Bart Smith founded Acme Corp. They built a paint factory in Newark City.",
+    ),
+  );
+  // "Newark City" alone isn't enough to fire; needs ≥2 unsupported.
+  assert.equal(r.detected, false);
 });
 
 test("supported claim does not flag", () => {
@@ -45,6 +56,28 @@ test("supported claim does not flag", () => {
 test("short completion is ignored", () => {
   const r = detectHallucination(
     trace("Sources: Hello world.\nWhat is in the sources?", "Hello."),
+  );
+  assert.equal(r.detected, false);
+});
+
+test("common-knowledge entities don't trigger false positives", () => {
+  const r = detectHallucination(
+    trace(
+      "Sources: Bart Smith founded Acme Corp in 1992 in San Francisco. Acme makes paint.",
+      "Bart Smith founded Acme Corp in San Francisco. Acme operates in the United States and ships to New York and Los Angeles.",
+    ),
+  );
+  // San Francisco/United States/New York/Los Angeles all in stoplist → no fire
+  assert.equal(r.detected, false);
+});
+
+test("regression: real RAG-style answer with light recall does not fire", () => {
+  // Realistic vibe-coder use: RAG bot with a Sources block and a faithful summary.
+  const r = detectHallucination(
+    trace(
+      "Sources: PoolBird is a Pittsburgh startup that ships pool-cleaning robots. The company raised a seed round in March 2025. CEO is Anita Reyes.",
+      "PoolBird ships pool-cleaning robots and is based in Pittsburgh. Anita Reyes leads the company. They raised a seed round in March 2025.",
+    ),
   );
   assert.equal(r.detected, false);
 });

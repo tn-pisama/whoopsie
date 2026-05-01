@@ -18,10 +18,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test 'test/**/*.test.ts'"
   },
   "peerDependencies": {
-    "ai": "^4.0.0 || ^5.0.0 || ^6.0.0"
+    "ai": "^6.0.0"
   },
   "dependencies": {
     "@whoops/detectors": "workspace:*",
@@ -29,7 +30,9 @@
   },
   "devDependencies": {
     "ai": "^6.0.0",
-    "typescript": "^5.6.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "zod": "^4.0.0"
   },
   "keywords": [
     "ai",
