@@ -1,0 +1,49 @@
+{
+  "name": "@whoops/sdk",
+  "version": "0.0.1",
+  "description": "See your AI app's failures live. Vercel AI SDK middleware that catches loops, hallucinations, and cost spikes.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "ai": "^4.0.0 || ^5.0.0 || ^6.0.0"
+  },
+  "dependencies": {
+    "@whoops/detectors": "workspace:*",
+    "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "ai": "^6.0.0",
+    "typescript": "^5.6.0"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "observability",
+    "vercel",
+    "ai-sdk",
+    "failure-detection",
+    "tracing"
+  ],
+  "license": "MIT",
+  "homepage": "https://whoops.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whoops-dev/whoops"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@whoops/cli",
+  "version": "0.0.1",
+  "description": "CLI for whoops.dev. Run `npx @whoops/cli init` in your Next.js + AI SDK project.",
+  "type": "module",
+  "bin": {
+    "whoops": "./dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "kleur": "^4.1.5",
+    "nanoid": "^5.0.0",
+    "open": "^10.0.0",
+    "ts-morph": "^24.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "license": "MIT"
+}
