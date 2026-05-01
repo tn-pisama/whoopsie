@@ -70,6 +70,16 @@ export default function LandingPage() {
         </p>
       </section>
 
+      <section className="mt-8 rounded-md border border-line bg-coral-soft/30 px-4 py-3 text-sm text-ink-soft">
+        <span className={`${GeistMono.className} text-coral`}>pre-alpha</span>{" "}
+        — first published 2026-05-01. Use it on a side project, not anything
+        production-critical. The data-handling story is at{" "}
+        <a href="/privacy" className="underline decoration-coral underline-offset-2 hover:text-ink">
+          /privacy
+        </a>
+        ; metadata-only mode ships zero prompt or completion text.
+      </section>
+
       <section className="grid gap-10 border-t border-line py-16 sm:grid-cols-3">
         <Feature
           title="Catches what's going wrong"
@@ -80,8 +90,15 @@ export default function LandingPage() {
           body="Copy a prompt. Paste it into your AI builder's chat. Your AI edits the code for you. You watch the dashboard."
         />
         <Feature
-          title="Private by default"
-          body="Emails, phone numbers, API keys, JWT tokens — all redacted in the SDK before they leave your app. You can toggle off any time."
+          title="Send only metadata if you want"
+          body={
+            <>
+              Default mode redacts emails, phones, cards, JWTs, and provider API keys in the SDK before they leave your app. Metadata-only mode ships token counts and detector verdicts only — zero prompt or completion text.{" "}
+              <a href="/privacy" className="underline decoration-coral underline-offset-2 hover:text-ink">
+                What we store →
+              </a>
+            </>
+          }
         />
       </section>
 
@@ -170,16 +187,29 @@ export default function LandingPage() {
       <footer className="border-t border-line py-12 font-mono text-xs text-ink-muted">
         <p>MIT-licensed SDK. Hosted dashboard free forever.</p>
         <p className="mt-2">No accounts. No metering. No upsell. Pre-alpha.</p>
+        <p className="mt-3">
+          <a href="/privacy" className="hover:text-ink">privacy</a>
+          {" · "}
+          <a href="https://github.com/tn-pisama/whoopsie" className="hover:text-ink">github</a>
+          {" · "}
+          <a href="https://www.npmjs.com/package/@whoopsie/sdk" className="hover:text-ink">npm</a>
+        </p>
       </footer>
     </main>
   );
 }
 
-function Feature({ title, body }: { title: string; body: string }) {
+function Feature({
+  title,
+  body,
+}: {
+  title: string;
+  body: string | React.ReactNode;
+}) {
   return (
     <div>
       <h3 className="font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-ink-muted">{body}</p>
+      <div className="mt-2 text-sm text-ink-muted">{body}</div>
     </div>
   );
 }

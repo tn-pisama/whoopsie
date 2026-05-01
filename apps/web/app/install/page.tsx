@@ -52,6 +52,13 @@ export default async function InstallPage({
           Pick where you build. Copy the prompt. Paste it into your AI builder&apos;s
           chat. It edits the code for you. No terminal needed.
         </p>
+        <p className="mt-3 max-w-xl text-sm text-ink-muted">
+          The prompt asks for metadata-only mode by default (zero prompt / completion text leaves your app). Full data-handling story:{" "}
+          <a href="/privacy" className="underline decoration-coral underline-offset-2 hover:text-ink">
+            /privacy
+          </a>
+          .
+        </p>
       </section>
 
       <section>

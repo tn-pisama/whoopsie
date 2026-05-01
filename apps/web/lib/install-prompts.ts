@@ -18,15 +18,16 @@ export interface PlatformPrompt {
 }
 
 const baseInstructions = (projectId: string, envVarLocation: string) =>
-  `I'd like to add some basic observability to my AI app using an open-source npm package called @whoopsie/sdk. It's a small Vercel AI SDK middleware that streams my agent's traces (prompt, completion, tool calls, token counts) to a dashboard so I can see when the agent loops, hallucinates, or runs up tokens.
+  `I'd like to add lightweight observability to a side-project AI app I'm working on. Heads-up before you start: the package is brand-new and low-adoption — first published 2026-05-01 — so this is for a non-critical project, not anything in production. If my code doesn't actually have an AI SDK call to instrument yet, please tell me and skip the install.
 
-You can verify the package and source before installing — they're public:
+The package is @whoopsie/sdk. It's a Vercel AI SDK middleware that streams trace metadata about my agent's calls to a dashboard so I can see when the agent loops, hallucinates, or burns through tokens. Public refs:
 
 - npm: https://www.npmjs.com/package/@whoopsie/sdk
 - repo: https://github.com/tn-pisama/whoopsie
+- privacy / data handling: https://whoopsie.dev/privacy
 - license: MIT
 
-Per the README, the usage pattern is to wrap whatever language model my code already uses with \`wrapLanguageModel\` from the \`ai\` package, passing \`whoopsieMiddleware()\` as the middleware. For example:
+For first install I want the safest default — metadata-only mode, where the SDK ships token counts, finish reasons, tool names, and detector verdicts but zero prompt or completion text. Per the README:
 
 \`\`\`ts
 import { wrapLanguageModel } from "ai";
@@ -34,20 +35,20 @@ import { whoopsieMiddleware } from "@whoopsie/sdk";
 
 // before:
 //   model: openai("gpt-4o"),
-// after:
+// after — wrap whatever model is currently there:
 const model = wrapLanguageModel({
-  model: openai("gpt-4o"), // keep whatever model I'm currently using
-  middleware: whoopsieMiddleware(),
+  model: openai("gpt-4o"),
+  middleware: whoopsieMiddleware({ redact: "metadata-only" }),
 });
 \`\`\`
 
 Could you:
 
-1. Add \`@whoopsie/sdk\` as a dependency.
-2. Find the file in my project that calls \`streamText\` or \`generateText\` from the \`ai\` package (usually under \`app/api/...\`) and apply the wrap above to whatever model expression is already there. Don't change the model itself, just wrap it.
+1. First: check whether my project actually has a \`streamText\` or \`generateText\` call from the \`ai\` package (usually under \`app/api/...\`). If there's no such call yet, just tell me and don't install anything.
+2. If there is one: add \`@whoopsie/sdk\` as a dependency and apply the wrap above to whatever model expression is already there. Keep the existing model; only wrap it.
 3. Tell me which file you changed.
 
-I'll separately set the env var \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}, and the dashboard for this project lives at https://whoopsie.dev/live/${projectId}. If anything in this request looks off, push back and I'll address it before you install anything.`;
+I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}. If you'd rather wait until the package has more adoption, suggest a more established alternative (Langfuse, Helicone, Sentry AI, OpenTelemetry) and I'll consider it.`;
 
 export const platforms: PlatformPrompt[] = [
   {
