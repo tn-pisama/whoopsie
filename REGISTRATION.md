@@ -3,9 +3,11 @@
 Status as of 2026-04-30:
 
 - ✅ Domain `whoopsie.dev` registered via Cloudflare Registrar ($12.20/yr).
+- ✅ DNS pointed at Vercel (A `@` → `76.76.21.21`, CNAME `www` → `cname.vercel-dns.com`, both proxy off).
+- ✅ Vercel TLS cert provisioned (cert id `cert_0xLfjbE1RecTRqiblqlOmeCD`, autoRenew, expires 90 days).
+- ✅ Live at https://whoopsie.dev/ and https://www.whoopsie.dev/. Smoke-tested in prod: POST `/api/v1/spans` accepted a 5x `web_search` loop event, loop detector fired severity=50.
 - ⏳ npm `@whoopsie/*` scope unclaimed — see step 1 below.
 - ⏳ GitHub `whoopsie-dev` org unclaimed — see step 3 below.
-- ⏳ DNS pointing at Vercel — see step 2 below.
 
 ## 1. Claim the npm scope (free, ~1 minute)
 
