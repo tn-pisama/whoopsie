@@ -10,6 +10,7 @@ import {
   severityTone,
   truncate,
 } from "@/lib/format";
+import { detectorCopy } from "@/lib/detector-copy";
 import { PulseDot } from "./pulse-dot";
 
 type Status = "connecting" | "live" | "reconnecting" | "error";
@@ -121,13 +122,19 @@ function EmptyState({
         Waiting for your first event…
       </h1>
       <p className="max-w-md text-ink-muted">
-        Run your dev server and hit your chat route. The first event will land
-        here within a second.
+        Open your app and send a chat message. The first call will land here
+        within a second.
       </p>
       <div className="rounded-md border border-line bg-white px-4 py-3 font-mono text-xs text-ink-soft">
         <span className="text-ink-muted">WHOOPSIE_PROJECT_ID=</span>
         {projectId}
       </div>
+      <a
+        href={`/install?id=${projectId}`}
+        className="font-mono text-xs text-ink-muted hover:text-coral"
+      >
+        haven&apos;t installed yet? get the prompt →
+      </a>
       {status !== "live" && status !== "connecting" && (
         <p className="font-mono text-xs text-ink-muted">
           stream status: {status}
@@ -190,11 +197,16 @@ function Hit({ hit }: { hit: { detector: string; severity: number } }) {
       : tone === "medium"
       ? "border-coral text-coral"
       : "border-line text-ink-muted";
+  const copy = detectorCopy(hit.detector);
   return (
     <span
-      className={`${GeistMono.className} rounded-sm border px-1.5 py-0.5 text-[10px] uppercase ${cls}`}
+      className={`inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-[11px] ${cls}`}
+      title={`${hit.detector} (severity ${hit.severity})`}
     >
-      {hit.detector} · {hit.severity}
+      {copy.title}
+      <span className={`${GeistMono.className} text-[9px] opacity-60`}>
+        {hit.detector}
+      </span>
     </span>
   );
 }
@@ -214,30 +226,39 @@ function EventDetail({ item }: { item: TraceWithHits }) {
           <h3 className="font-mono text-xs uppercase text-ink-muted">
             detections
           </h3>
-          {hits.map((h) => (
-            <div
-              key={h.detector}
-              className="rounded-md border border-coral/40 bg-coral-soft/40 p-3"
-            >
-              <div className="flex items-baseline justify-between">
-                <span className={`${GeistMono.className} text-sm font-medium`}>
-                  {h.detector}
-                </span>
-                <span className="font-mono text-xs text-ink-muted">
-                  severity {h.severity}
-                </span>
+          {hits.map((h) => {
+            const copy = detectorCopy(h.detector);
+            return (
+              <div
+                key={h.detector}
+                className="rounded-md border border-coral/40 bg-coral-soft/40 p-3"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-ink">{copy.title}</p>
+                    <p className="text-xs text-ink-muted">{copy.blurb}</p>
+                  </div>
+                  <span className={`${GeistMono.className} text-xs text-ink-muted whitespace-nowrap`}>
+                    {h.detector} · sev {h.severity}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-ink-soft">{h.summary}</p>
+                {h.fix && (
+                  <p className="mt-2 text-sm text-ink-muted">→ {h.fix}</p>
+                )}
+                {h.evidence && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-ink-muted hover:text-ink">
+                      raw evidence
+                    </summary>
+                    <pre className={`${GeistMono.className} mt-2 max-h-48 overflow-auto rounded bg-paper p-2 text-[11px] leading-5`}>
+                      {JSON.stringify(h.evidence, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </div>
-              <p className="mt-1 text-sm">{h.summary}</p>
-              {h.fix && (
-                <p className="mt-2 text-sm text-ink-muted">→ {h.fix}</p>
-              )}
-              {h.evidence && (
-                <pre className={`${GeistMono.className} mt-3 max-h-48 overflow-auto rounded bg-paper p-2 text-[11px] leading-5`}>
-                  {JSON.stringify(h.evidence, null, 2)}
-                </pre>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {event.prompt && (
