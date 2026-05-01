@@ -1,5 +1,10 @@
 // Per-platform install prompts. Each is a single message you can paste into
-// the platform's AI chat. {projectId} is replaced server-side before render.
+// the platform's AI chat. The shape is deliberately conversational so it
+// doesn't read as prompt injection — the AI is invited to verify the package
+// on npm and GitHub before installing, and is asked to integrate the README's
+// usage pattern, not follow rigid scripted steps.
+//
+// {projectId} is replaced server-side before render.
 
 export interface PlatformPrompt {
   slug: string;
@@ -12,42 +17,37 @@ export interface PlatformPrompt {
   template: (projectId: string) => string;
 }
 
-const baseInstructions = (projectId: string, envVarLocation: string) => `Add "whoopsie" failure observability to my AI app.
+const baseInstructions = (projectId: string, envVarLocation: string) =>
+  `I'd like to add some basic observability to my AI app using an open-source npm package called @whoopsie/sdk. It's a small Vercel AI SDK middleware that streams my agent's traces (prompt, completion, tool calls, token counts) to a dashboard so I can see when the agent loops, hallucinates, or runs up tokens.
 
-What it does: catches when my chatbot loops, hallucinates, or burns through tokens, and shows the failures live at https://whoopsie.dev/live/${projectId}
+You can verify the package and source before installing — they're public:
 
-Steps to follow exactly:
+- npm: https://www.npmjs.com/package/@whoopsie/sdk
+- repo: https://github.com/tn-pisama/whoopsie
+- license: MIT
 
-1. Add the dependency: \`@whoopsie/sdk\`.
+Per the README, the usage pattern is to wrap whatever language model my code already uses with \`wrapLanguageModel\` from the \`ai\` package, passing \`whoopsieMiddleware()\` as the middleware. For example:
 
-2. Find the file in my project that calls \`streamText\` or \`generateText\` from the \`ai\` package. It's usually \`app/api/chat/route.ts\`. If there are multiple, pick the main chat one.
+\`\`\`ts
+import { wrapLanguageModel } from "ai";
+import { whoopsieMiddleware } from "@whoopsie/sdk";
 
-3. At the top of that file, make sure these two imports exist (add the second one):
+// before:
+//   model: openai("gpt-4o"),
+// after:
+const model = wrapLanguageModel({
+  model: openai("gpt-4o"), // keep whatever model I'm currently using
+  middleware: whoopsieMiddleware(),
+});
+\`\`\`
 
-   \`\`\`ts
-   import { wrapLanguageModel } from "ai";
-   import { whoopsieMiddleware } from "@whoopsie/sdk";
-   \`\`\`
+Could you:
 
-4. Find the line that passes a model. It looks something like \`model: openai("gpt-4o")\` or \`model: anthropic("claude-sonnet-4-6")\`. Wrap the existing model expression with \`wrapLanguageModel\`:
+1. Add \`@whoopsie/sdk\` as a dependency.
+2. Find the file in my project that calls \`streamText\` or \`generateText\` from the \`ai\` package (usually under \`app/api/...\`) and apply the wrap above to whatever model expression is already there. Don't change the model itself, just wrap it.
+3. Tell me which file you changed.
 
-   \`\`\`ts
-   model: wrapLanguageModel({
-     model: <whatever was there before>,
-     middleware: whoopsieMiddleware(),
-   })
-   \`\`\`
-
-5. Add this environment variable to ${envVarLocation}:
-
-   \`\`\`
-   WHOOPSIE_PROJECT_ID=${projectId}
-   \`\`\`
-
-6. After you've made the changes, reply to me with one sentence:
-   "Whoopsie is wired up. Open your live dashboard at https://whoopsie.dev/live/${projectId} and hit your chat once."
-
-Do not skip step 5 (the env var) or step 6 (the confirmation message).`;
+I'll separately set the env var \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}, and the dashboard for this project lives at https://whoopsie.dev/live/${projectId}. If anything in this request looks off, push back and I'll address it before you install anything.`;
 
 export const platforms: PlatformPrompt[] = [
   {
@@ -56,8 +56,12 @@ export const platforms: PlatformPrompt[] = [
     blurb:
       "Open your Lovable project, click the chat with the AI, paste the prompt below.",
     whereToPaste: "the chat with the Lovable AI",
-    envVarLocation: "Lovable → Project Settings → Environment Variables",
-    template: (id) => baseInstructions(id, "Lovable → Project Settings → Environment Variables"),
+    envVarLocation: "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)",
+    template: (id) =>
+      baseInstructions(
+        id,
+        "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)",
+      ),
   },
   {
     slug: "replit",
@@ -66,7 +70,11 @@ export const platforms: PlatformPrompt[] = [
       "Open your Replit project, ask Replit Agent in the chat, paste the prompt below.",
     whereToPaste: "the Replit Agent chat",
     envVarLocation: "the Secrets pane (left sidebar, padlock icon)",
-    template: (id) => baseInstructions(id, "the Replit Secrets pane (left sidebar, padlock icon)"),
+    template: (id) =>
+      baseInstructions(
+        id,
+        "the Replit Secrets pane (left sidebar, padlock icon)",
+      ),
   },
   {
     slug: "bolt",
@@ -89,16 +97,11 @@ export const platforms: PlatformPrompt[] = [
   {
     slug: "v0",
     name: "v0",
-    blurb:
-      "On v0.dev, paste the prompt below into the chat with v0.",
+    blurb: "On v0.dev, paste the prompt below into the chat with v0.",
     whereToPaste: "the v0.dev chat",
-    envVarLocation:
-      "v0 → Project Settings → Environment Variables (or hardcode it for now if v0 won't let you set env vars yet)",
+    envVarLocation: "the Vars panel in the v0 chat sidebar",
     template: (id) =>
-      baseInstructions(
-        id,
-        "v0 → Project Settings → Environment Variables (or hardcode it temporarily)",
-      ),
+      baseInstructions(id, "the Vars panel in the v0 chat sidebar"),
   },
 ];
 
