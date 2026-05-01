@@ -6,19 +6,20 @@
 
 ## Status (2026-04-30)
 
-Pre-alpha scaffold, but the local pipeline works end-to-end. You can boot it on `localhost:3030`, POST a fake trace event, and watch the detector hits land in the dashboard via SSE.
+Pre-alpha. Local pipeline works end-to-end. 53 tests pass: 38 detectors + 5 SDK runtime + 4 CLI patcher + 6 storage (memory and Postgres).
 
 | Surface | State |
 |---|---|
-| `@whoops/sdk` (AI SDK middleware + OTEL exporter + PII redaction) | Builds. Not yet wired against a live `streamText` call. |
-| `@whoops/detectors` (7 detectors, 30 tests) | All tests pass. Used by the ingest endpoint. |
-| `@whoops/cli` (`npx whoops init` with ts-morph patcher) | Builds. Not yet end-to-end tested against a real Next.js app. |
-| `apps/web` (landing + live dashboard + ingest API + SSE) | Builds and runs. End-to-end smoke test green: POST event → detector fires → SSE pushes hit → dashboard renders. |
+| `@whoops/sdk` (AI SDK middleware + OTEL exporter + PII redaction) | Builds. **Runtime-tested** against AI SDK v6 `streamText` and `generateText` via `MockLanguageModelV3`. |
+| `@whoops/detectors` (7 detectors, 38 tests) | All tests pass. Hallucination + derailment hardened with regression tests against realistic vibe-coder prompts. |
+| `@whoops/cli` (`npx whoops init` with ts-morph patcher) | **Field-tested** against a tmp Next.js + AI SDK fixture. Idempotent, dry-run safe, reuses existing project IDs. |
+| `apps/web` (landing + live dashboard + ingest API + SSE) | Builds and runs. End-to-end smoke green on both backends. |
+| Storage | `MemoryStore` (default) or `PostgresStore` with LISTEN/NOTIFY (set `WHOOPS_DATABASE_URL`). Both backends covered by integration tests. |
+| GitHub Actions release workflow | `.github/workflows/release.yml` ready; uses npm Trusted Publishing (no token secret), runs on `v*` tags. |
 | Vercel Marketplace listing | Not started. |
 | GitHub PR comment bot | Not started. |
-| Hosted infra (Neon, prod ingest, magic-link auth) | Not started; v0 uses in-memory bus. |
-| Domain `whoops.dev` | Available, **not yet registered**. |
-| npm `@whoops/*` scope | Available, **not yet registered**. |
+| Domain `whoops.dev` | Available. **User-action only** — see [REGISTRATION.md](./REGISTRATION.md). |
+| npm `@whoops/*` scope | Available. **User-action only** — see [REGISTRATION.md](./REGISTRATION.md). |
 
 ## 60-second quickstart (target experience)
 
@@ -42,6 +43,7 @@ Run your dev server, hit your chat route once. The first failure shows up in the
 cd ~/whoops
 nvm use   # or use Node 22+
 pnpm install
+pnpm test    # runs the full suite (53 tests, ~3s)
 pnpm build
 pnpm start   # boots @whoops/web on http://localhost:3000
 # in another terminal:
@@ -50,6 +52,21 @@ BASE=http://localhost:3000 pnpm smoke
 ```
 
 The smoke script POSTs three events (clean, loop, cost-spike) to the local ingest. The dashboard at `/live/wh_smoketest` will show all three with detector chips on the loop and cost ones.
+
+### With Postgres (production-like setup)
+
+```bash
+createdb whoops_test    # or use any reachable Postgres
+WHOOPS_DATABASE_URL="postgres://localhost:5432/whoops_test" pnpm start
+```
+
+The store auto-creates `whoops_traces` and a partial index on first run. SSE fan-out goes through Postgres LISTEN/NOTIFY so multi-instance deploys work without an in-process bus.
+
+To run the integration tests against Postgres:
+
+```bash
+WHOOPS_TEST_DATABASE_URL="postgres://localhost:5432/whoops_test" pnpm test
+```
 
 ## What gets caught (v1)
 
@@ -104,11 +121,22 @@ scripts/
 
 ## Honest known gaps
 
-1. The CLI's ts-morph patcher has been written but not run against a real Next.js project. It compiles; field-testing is the next step.
-2. The hallucination and derailment detectors are heuristic; expect false positives. Documented in code.
-3. Storage is in-memory (`Map<projectId, RingBuffer>`). Restart the dashboard and you lose state. Production pivot to Neon Postgres + LISTEN/NOTIFY is in the plan.
-4. SSE survives across the client side, but on serverless deploys (Vercel Functions) the in-memory bus only fans out within a single instance. Multi-instance fan-out needs Redis or Postgres LISTEN/NOTIFY.
-5. The SDK's middleware shape mirrors `experimental_wrapLanguageModel` but has not been runtime-tested against `streamText`. Type compatibility with AI SDK v6 is asserted, not verified.
+1. **Domain `whoops.dev` and npm `@whoops/*` scope are unregistered.** User-action only — the agent cannot register on your behalf. Walkthrough in [REGISTRATION.md](./REGISTRATION.md). Total cost about $13/year for the domain; npm scope and GitHub org are free.
+2. **Hallucination and derailment are still heuristic.** Hardened with stoplists and regression tests, but they will never match an LLM-judge for precision. Honest about this in code comments and detector descriptions.
+3. **No magic-link auth, no multi-tenancy, no rate limiting.** Anyone with a project ID can read its stream. Acceptable for v0 / HN-launch trust posture; magic-link comes in v0.2.
+4. **No Vercel Marketplace listing yet.** That's the wedge per the plan, but it requires the npm scope to be claimed first.
+5. **GitHub PR comment bot not built.** Post-v1 distribution surface, see plan.
+
+## Releasing
+
+Tag and push:
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+`.github/workflows/release.yml` runs typecheck → test → build → `pnpm -r publish --access public --provenance`. Uses npm [Trusted Publishing via OIDC](https://docs.npmjs.com/trusted-publishers) — no `NPM_TOKEN` secret to manage. Configure each package's trusted publisher in npm's UI before the first tag push.
 
 ## License
 

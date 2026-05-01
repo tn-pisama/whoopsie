@@ -39,3 +39,7 @@ pnpm smoke         # end-to-end test against the running server
 ## Reference: Pisama
 
 Detectors are ports of `~/pisama/packages/pisama-core/src/pisama_core/detection/detectors/*.py`. Algorithm-level fidelity, simplified surface (no platform overrides, no async, no enterprise tiering). Hallucination and derailment are deliberately weaker than the Pisama versions — vibe-coder pack accepts heuristic precision.
+
+## Subagent gotcha
+
+`general-purpose` agents will enter `EnterPlanMode` on their own for any non-trivial task and stall waiting for approval. To get them to execute, the prompt must lead with explicit anti-plan instructions: "EXECUTE NOW. DO NOT use EnterPlanMode. DO NOT write a plan file. Begin file edits in your first tool call." Confirmed to work. If you don't include those instructions, expect the agent to stall — and you cannot send approval from inside another agent because `SendMessage` is not surfaced to nested callers.
