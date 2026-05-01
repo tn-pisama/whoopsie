@@ -3,5 +3,8 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && corepack enable && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm --filter @whoopsie/web build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    { "path": "/api/internal/cleanup", "schedule": "0 5 * * *" }
+  ]
 }

@@ -10,3 +10,4 @@ dist/
 .whoopsie/
 coverage/
 .vercel
+.env.production
