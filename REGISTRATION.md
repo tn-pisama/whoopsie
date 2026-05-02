@@ -145,7 +145,47 @@ WHOOPSIE_DATABASE_URL=$(grep WHOOPSIE_DATABASE_URL .env.local | cut -d= -f2- | t
 
 You should see a single row with the project_id + email you posted.
 
-## 5. Subdomains for later
+## 5. Wire Resend for email alerts (~3 minutes, optional)
+
+Without Resend, the dashboard is passive — users have to keep a tab open to see failures. With Resend, anyone who's left an email gets a one-time *"whoopsie just caught your first detector hit"* email when their first failure lands.
+
+The code path is already shipped (`apps/web/lib/alerts.ts`, integrated in `/api/v1/spans`). It's gated on `RESEND_API_KEY`. If the env var isn't set, alert sends are a clean no-op — no errors, no test failures.
+
+**Setup (Resend free tier — 3,000 emails/month):**
+
+1. https://resend.com/signup → free tier.
+2. **Add and verify `whoopsie.dev` as a sending domain.** Resend will give you 3 DNS records (TXT for SPF, TXT for DKIM, MX for return path). Add them in Cloudflare → DNS, all proxy off / DNS only. Verification takes 5–60s.
+3. Generate an API key: Resend → API Keys → Create. Scope: full access (or "send-only" if available). Copy the value.
+4. Set the env var on Vercel:
+   ```bash
+   vercel env add RESEND_API_KEY production
+   # paste the key when prompted
+   ```
+5. Optional: customise `WHOOPSIE_FROM_EMAIL` (default `alerts@whoopsie.dev`) and `WHOOPSIE_REPLY_TO` (default `hi@whoopsie.dev`) the same way.
+6. Redeploy. The alert pipeline picks up the new env var on next cold start.
+
+**Verify after deploy:**
+
+```bash
+# Capture an email against a test project
+PROJ="ws_alerttest_$(date +%s)"
+curl -s -X POST https://whoopsie.dev/api/v1/contact \
+  -H "content-type: application/json" \
+  -d "{\"projectId\":\"$PROJ\",\"email\":\"you@yourdomain.com\",\"source\":\"manual\"}"
+
+# Fire a loop event for the same project
+NOW=$(python3 -c 'import time; print(int(time.time()*1000))')
+curl -s -X POST https://whoopsie.dev/api/v1/spans \
+  -H "content-type: application/json" \
+  -H "x-whoopsie-project-id: $PROJ" \
+  -d "{\"events\":[{\"projectId\":\"$PROJ\",\"traceId\":\"a1\",\"spanId\":\"a1\",\"startTime\":$NOW,\"endTime\":$((NOW+200)),\"model\":\"gpt-4o\",\"toolCalls\":[$(for i in $(seq 1 6); do printf '{\"toolCallId\":\"x%d\",\"toolName\":\"web_search\",\"startTime\":%d}' $i $NOW; [ $i -lt 6 ] && printf ','; done)],\"finishReason\":\"tool_calls\",\"metadata\":{}}]}"
+
+# Check your inbox. Subject should match: "whoopsie: stuck in a loop on gpt-4o"
+```
+
+The alert table dedupes per `(project_id, email, "first_failure")`, so even if the same project keeps failing you only get one email. Reply STOP and we delete you.
+
+## 6. Subdomains for later
 
 - `ingest.whoopsie.dev` — when we split ingest off the main app
 - `api.whoopsie.dev` — public API

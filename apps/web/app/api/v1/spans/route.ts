@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDetectors, type AgentTrace } from "@whoopsie/detectors";
 import { getStore, publish } from "@/lib/bus";
+import { sendFirstFailureAlerts } from "@/lib/alerts";
 import type { TraceEvent } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -84,6 +85,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           console.error("[whoopsie] saveContact error", err);
           seenContacts.delete(cacheKey);
         }
+      }
+    }
+
+    // First-failure email alerts. No-op when RESEND_API_KEY is unset, when
+    // there are no hits, or when there are no contacts awaiting alerts.
+    if (hits.length > 0) {
+      try {
+        const store = await getStore();
+        await sendFirstFailureAlerts(store, projectId, { event, hits });
+      } catch (err) {
+        console.error("[whoopsie] alert send error", err);
       }
     }
 

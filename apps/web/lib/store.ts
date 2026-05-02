@@ -9,6 +9,17 @@ export interface ContactRecord {
   createdAt: number;
 }
 
+export interface AlertRecord {
+  projectId: string;
+  email: string;
+  kind: string; // e.g. "first_failure"
+}
+
+export interface ContactWithAlerts {
+  email: string;
+  source: string;
+}
+
 export interface Store {
   publish(projectId: string, payload: TraceWithHits): Promise<void>;
   recent(projectId: string, n?: number): Promise<TraceWithHits[]>;
@@ -17,6 +28,19 @@ export interface Store {
     listener: (payload: TraceWithHits) => void,
   ): Promise<() => void>;
   saveContact(record: ContactRecord): Promise<{ created: boolean }>;
+  /**
+   * Returns contacts for a project that have NOT yet received an alert of
+   * `kind`. Used by the alert pipeline to figure out who to email.
+   */
+  contactsAwaitingAlert(
+    projectId: string,
+    kind: string,
+  ): Promise<ContactWithAlerts[]>;
+  /**
+   * Atomically marks an alert as sent. Returns false if a row for
+   * (projectId, email, kind) already existed (race-safe dedupe).
+   */
+  recordAlert(record: AlertRecord): Promise<{ recorded: boolean }>;
   close?(): Promise<void>;
 }
 
@@ -44,6 +68,7 @@ interface MemoryChannel {
 export class MemoryStore implements Store {
   private channels = new Map<string, MemoryChannel>();
   private contacts = new Map<string, ContactRecord>();
+  private alerts = new Set<string>();
 
   private channelFor(projectId: string): MemoryChannel {
     let ch = this.channels.get(projectId);
@@ -84,6 +109,27 @@ export class MemoryStore implements Store {
     return { created: true };
   }
 
+  async contactsAwaitingAlert(
+    projectId: string,
+    kind: string,
+  ): Promise<ContactWithAlerts[]> {
+    const out: ContactWithAlerts[] = [];
+    for (const [key, contact] of this.contacts) {
+      if (!key.startsWith(`${projectId}:`)) continue;
+      const alertKey = `${projectId}:${contact.email.toLowerCase()}:${kind}`;
+      if (this.alerts.has(alertKey)) continue;
+      out.push({ email: contact.email, source: contact.source });
+    }
+    return out;
+  }
+
+  async recordAlert(record: AlertRecord): Promise<{ recorded: boolean }> {
+    const key = `${record.projectId}:${record.email.toLowerCase()}:${record.kind}`;
+    if (this.alerts.has(key)) return { recorded: false };
+    this.alerts.add(key);
+    return { recorded: true };
+  }
+
   // Used by tests + admin scripts that drive MemoryStore directly.
   listContacts(): ContactRecord[] {
     return Array.from(this.contacts.values());
@@ -113,6 +159,16 @@ const MIGRATION = `
   );
   CREATE UNIQUE INDEX IF NOT EXISTS whoopsie_contacts_proj_email_idx
     ON whoopsie_contacts (project_id, lower(email));
+
+  CREATE TABLE IF NOT EXISTS whoopsie_email_alerts (
+    id BIGSERIAL PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    sent_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS whoopsie_email_alerts_proj_email_kind_idx
+    ON whoopsie_email_alerts (project_id, lower(email), kind);
 `;
 
 interface PgNotifyPayload {
@@ -207,6 +263,38 @@ export class PostgresStore implements Store {
       [record.projectId, record.email, record.source],
     );
     return { created: res.rows.length > 0 };
+  }
+
+  async contactsAwaitingAlert(
+    projectId: string,
+    kind: string,
+  ): Promise<ContactWithAlerts[]> {
+    await this.migrate();
+    const res = await this.pool.query<ContactWithAlerts>(
+      `SELECT c.email, c.source
+       FROM whoopsie_contacts c
+       LEFT JOIN whoopsie_email_alerts a
+         ON a.project_id = c.project_id
+        AND lower(a.email) = lower(c.email)
+        AND a.kind = $2
+       WHERE c.project_id = $1
+         AND c.unsubscribed_at IS NULL
+         AND a.id IS NULL`,
+      [projectId, kind],
+    );
+    return res.rows;
+  }
+
+  async recordAlert(record: AlertRecord): Promise<{ recorded: boolean }> {
+    await this.migrate();
+    const res = await this.pool.query<{ id: string }>(
+      `INSERT INTO whoopsie_email_alerts (project_id, email, kind)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (project_id, lower(email), kind) DO NOTHING
+       RETURNING id`,
+      [record.projectId, record.email, record.kind],
+    );
+    return { recorded: res.rows.length > 0 };
   }
 
   async close(): Promise<void> {
