@@ -196,6 +196,10 @@ export default function LandingPage() {
         <p className="mt-3">
           <a href="/demo" className="hover:text-ink">demo</a>
           {" · "}
+          <a href="/status" className="hover:text-ink">status</a>
+          {" · "}
+          <a href="/terms" className="hover:text-ink">terms</a>
+          {" · "}
           <a href="/privacy" className="hover:text-ink">privacy</a>
           {" · "}
           <a href="https://github.com/tn-pisama/whoopsie" className="hover:text-ink">github</a>

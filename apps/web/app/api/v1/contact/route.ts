@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@/lib/bus";
+import { ipFromRequest, rateLimitContact } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,14 @@ const ALLOWED_SOURCES = new Set([
 ]);
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const gate = rateLimitContact(ipFromRequest(req));
+  if (!gate.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfterSec: gate.retryAfterSec },
+      { status: 429, headers: { "Retry-After": String(gate.retryAfterSec) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

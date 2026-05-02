@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { runDetectors, type AgentTrace } from "@whoopsie/detectors";
 import { getStore, publish } from "@/lib/bus";
 import { sendFirstFailureAlerts } from "@/lib/alerts";
+import {
+  ipFromRequest,
+  rateLimitSpansProject,
+  rateLimitSpansRequest,
+} from "@/lib/rate-limit";
 import type { TraceEvent } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -13,6 +18,21 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Per-IP request rate limit. Drops anonymous floods before they touch
+  // anything else.
+  const ip = ipFromRequest(req);
+  const ipGate = rateLimitSpansRequest(ip);
+  if (!ipGate.allowed) {
+    return NextResponse.json(
+      {
+        error: "rate_limited",
+        scope: "ip",
+        retryAfterSec: ipGate.retryAfterSec,
+      },
+      { status: 429, headers: { "Retry-After": String(ipGate.retryAfterSec) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -24,8 +44,40 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!events) {
     return NextResponse.json({ error: "missing events array" }, { status: 400 });
   }
+  if (events.length > 200) {
+    return NextResponse.json(
+      { error: "events array too large (max 200 per request)" },
+      { status: 413 },
+    );
+  }
 
   const headerPid = req.headers.get("x-whoopsie-project-id");
+
+  // Per-project event rate limit. Counts events not requests, so a batch
+  // of 100 burns 100 budget. Limited per project_id, per minute.
+  const projectIds = new Map<string, number>();
+  for (const e of events) {
+    const pid = e.projectId || headerPid;
+    if (pid) projectIds.set(pid, (projectIds.get(pid) ?? 0) + 1);
+  }
+  for (const [pid, n] of projectIds) {
+    const projectGate = rateLimitSpansProject(pid, n);
+    if (!projectGate.allowed) {
+      return NextResponse.json(
+        {
+          error: "rate_limited",
+          scope: "project",
+          projectId: pid,
+          retryAfterSec: projectGate.retryAfterSec,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(projectGate.retryAfterSec) },
+        },
+      );
+    }
+  }
+
   const detections: { traceId: string; hits: ReturnType<typeof runDetectors> }[] = [];
 
   for (const event of events) {

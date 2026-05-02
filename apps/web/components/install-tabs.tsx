@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GeistMono } from "geist/font/mono";
 import { CopyBlock } from "./copy-block";
 import { EmailCapture } from "./email-capture";
+import { TermsGate } from "./terms-gate";
 
 interface PlatformView {
   slug: string;
@@ -54,29 +55,31 @@ export function InstallTabs({
       <p className="mt-6 text-ink-muted">{platform.blurb}</p>
 
       <div className="mt-6">
-        <CopyBlock text={platform.prompt} />
-      </div>
+        <TermsGate>
+          <CopyBlock text={platform.prompt} />
 
-      <div className="mt-8 rounded-md border border-line bg-white p-4">
-        <p className="font-mono text-xs uppercase text-ink-muted">
-          your live dashboard
-        </p>
-        <a
-          href={dashboardUrl}
-          className={`${GeistMono.className} mt-2 block break-all text-sm text-ink hover:text-coral`}
-        >
-          {dashboardUrl}
-        </a>
-        <p className="mt-3 text-sm text-ink-muted">
-          Open this in another tab. Once {platform.name} confirms whoopsie is
-          wired up and you hit your chat, the first event lands here.
-        </p>
-        <p className="mt-2 font-mono text-xs text-ink-muted">
-          project id: {projectId}
-        </p>
-        <div className="mt-5 border-t border-line pt-4">
-          <EmailCapture projectId={projectId} source="install_page" />
-        </div>
+          <div className="mt-8 rounded-md border border-line bg-white p-4">
+            <p className="font-mono text-xs uppercase text-ink-muted">
+              your live dashboard
+            </p>
+            <a
+              href={dashboardUrl}
+              className={`${GeistMono.className} mt-2 block break-all text-sm text-ink hover:text-coral`}
+            >
+              {dashboardUrl}
+            </a>
+            <p className="mt-3 text-sm text-ink-muted">
+              Open this in another tab. Once {platform.name} confirms whoopsie is
+              wired up and you hit your chat, the first event lands here.
+            </p>
+            <p className="mt-2 font-mono text-xs text-ink-muted">
+              project id: {projectId}
+            </p>
+            <div className="mt-5 border-t border-line pt-4">
+              <EmailCapture projectId={projectId} source="install_page" />
+            </div>
+          </div>
+        </TermsGate>
       </div>
     </div>
   );
