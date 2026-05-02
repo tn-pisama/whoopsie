@@ -5,10 +5,11 @@ import { GeistMono } from "geist/font/mono";
 import { InstallTabs } from "./install-tabs";
 import { LovableNotReachable } from "./lovable-not-reachable";
 
-interface PlatformView {
+interface PlatformPrompt {
   slug: string;
   name: string;
   blurb: string;
+  prompt: string;
 }
 
 const STORAGE_KEY = "whoopsie:project-id";
@@ -17,13 +18,16 @@ const ID_RE = /^ws_[A-Za-z0-9]+$/;
 export function InstallPageShell({
   initial,
   serverProjectId,
-  platforms,
-  buildPrompt,
+  platformsForServerId,
 }: {
   initial: string;
   serverProjectId: string;
-  platforms: PlatformView[];
-  buildPrompt: (slug: string, projectId: string) => string;
+  // Server precomputes all prompts for the server-minted projectId.
+  // If localStorage has a different stable id, we rewrite client-side
+  // by string-replacing the server projectId in each prompt — same
+  // shape, just substituted. Lets us keep the page server-rendered
+  // (no function props across the RSC boundary).
+  platformsForServerId: PlatformPrompt[];
 }) {
   const [projectId, setProjectId] = useState<string>(serverProjectId);
 
@@ -50,12 +54,17 @@ export function InstallPageShell({
 
   const dashboardUrl = `https://whoopsie.dev/live/${projectId}`;
 
-  const views = platforms.map((p) => ({
-    slug: p.slug,
-    name: p.name,
-    blurb: p.blurb,
-    prompt: buildPrompt(p.slug, projectId),
-  }));
+  // Substitute the active projectId into each precomputed prompt. The
+  // serverProjectId appears verbatim in the prompt body (and in the
+  // dashboard URL inside it), so a global replace gives us the same
+  // result we'd have built with a fresh template.
+  const views =
+    projectId === serverProjectId
+      ? platformsForServerId
+      : platformsForServerId.map((p) => ({
+          ...p,
+          prompt: p.prompt.split(serverProjectId).join(projectId),
+        }));
 
   return (
     <>
