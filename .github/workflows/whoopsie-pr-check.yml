@@ -1,0 +1,129 @@
+name: whoopsie pr check
+
+# Posts a PR comment summarising any whoopsie detector hits on the project's
+# preview deploy. Comment is updated in place across pushes (no spam).
+#
+# To use this workflow in your own repo, copy it to `.github/workflows/` and
+# set:
+#   secrets.WHOOPSIE_PROJECT_ID   the ws_* id from /install
+# Optional:
+#   secrets.WHOOPSIE_BASE_URL     defaults to https://whoopsie.dev
+#
+# The workflow needs `pull-requests: write` so it can comment.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  whoopsie-pr-check:
+    name: whoopsie failures on preview
+    runs-on: ubuntu-latest
+    if: ${{ secrets.WHOOPSIE_PROJECT_ID != '' }}
+    steps:
+      - name: Wait for preview to receive traffic
+        # If your preview deploy needs a moment to wake up + your e2e tests
+        # to fire requests through it, give it some time. Adjust to taste.
+        run: sleep 60
+
+      - name: Fetch recent failures from whoopsie
+        id: fetch
+        env:
+          PROJECT_ID: ${{ secrets.WHOOPSIE_PROJECT_ID }}
+          BASE_URL: ${{ secrets.WHOOPSIE_BASE_URL || 'https://whoopsie.dev' }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "${BASE_URL}/api/v1/traces?projectId=${PROJECT_ID}&limit=50&only=failures" \
+            > /tmp/whoopsie.json
+          # surface counts to subsequent steps
+          count=$(node -e "console.log(JSON.parse(require('fs').readFileSync('/tmp/whoopsie.json','utf8')).count)")
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+
+      - name: Render comment body
+        id: render
+        run: |
+          node <<'JS' > /tmp/comment.md
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync("/tmp/whoopsie.json", "utf8"));
+          const events = data.events || [];
+
+          const friendly = {
+            loop: "Stuck in a loop",
+            repetition: "Repeating itself",
+            cost: "Burning tokens",
+            completion: "Stopped early or ran away",
+            hallucination: "Made something up",
+            context: "Ignored the user's context",
+            derailment: "Did the wrong thing",
+          };
+
+          if (events.length === 0) {
+            console.log("<!-- whoopsie-pr-check -->");
+            console.log("**whoopsie:** no detector hits in the last 50 traces. ✨\n");
+            console.log(`<sub>project [${data.projectId}](https://whoopsie.dev/live/${data.projectId})</sub>`);
+            process.exit(0);
+          }
+
+          const counts = new Map();
+          for (const e of events) {
+            for (const h of e.hits) {
+              counts.set(h.detector, (counts.get(h.detector) ?? 0) + 1);
+            }
+          }
+          const rows = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+
+          console.log("<!-- whoopsie-pr-check -->");
+          console.log(`**whoopsie:** ${events.length} trace${events.length === 1 ? "" : "s"} fired a detector in the last 50.\n`);
+          console.log("| Detector | Count |");
+          console.log("|---|---|");
+          for (const [name, n] of rows) {
+            console.log(`| ${friendly[name] ?? name} (${name}) | ${n} |`);
+          }
+          console.log("");
+          console.log("**Recent (newest 5):**\n");
+          console.log("| When | Model | Detectors | Trace |");
+          console.log("|---|---|---|---|");
+          for (const e of events.slice(0, 5)) {
+            const ago = Math.round((Date.now() - e.event.startTime) / 60000);
+            const detectors = e.hits.map((h) => h.detector).join(", ");
+            const id = e.event.traceId.slice(0, 8);
+            console.log(`| ${ago}m ago | \`${e.event.model || "?"}\` | ${detectors} | \`${id}\` |`);
+          }
+          console.log("");
+          console.log(`<sub>full evidence at [${data.projectId}](https://whoopsie.dev/live/${data.projectId})</sub>`);
+          JS
+
+      - name: Upsert PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const body = fs.readFileSync("/tmp/comment.md", "utf8");
+            const marker = "<!-- whoopsie-pr-check -->";
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

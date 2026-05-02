@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { gateway } from "@ai-sdk/gateway";
-import { streamText, wrapLanguageModel, type LanguageModelMiddleware } from "ai";
+import { streamText, wrapLanguageModel } from "ai";
 import { whoopsieMiddleware } from "@whoopsie/sdk";
 
 export const runtime = "nodejs";
@@ -95,19 +95,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   // own ingest, with the demo project ID, in metadata-only mode — every visitor
   // adds activity to the public dashboard at /live/ws_demo_public without
   // their actual prompts/completions ever being persisted.
-  //
-  // The cast is because our SDK at v0.0.1 declares its own middleware shape
-  // (so the published package is self-contained, no @ai-sdk/provider peer dep)
-  // and TS's structural matching can't see it as LanguageModelV3Middleware.
-  // Runtime behavior is identical; v0.0.2 of @whoopsie/sdk should expose the
-  // V3 type directly.
-  const middleware = whoopsieMiddleware({
-    projectId: DEMO_PROJECT_ID,
-    redact: "metadata-only",
-  }) as unknown as LanguageModelMiddleware;
   const wrapped = wrapLanguageModel({
     model: gateway("anthropic/claude-haiku-4-5"),
-    middleware,
+    middleware: whoopsieMiddleware({
+      projectId: DEMO_PROJECT_ID,
+      redact: "metadata-only",
+    }),
   });
 
   const result = streamText({

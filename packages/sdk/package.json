@@ -1,6 +1,6 @@
 {
   "name": "@whoopsie/sdk",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "See your AI app's failures live. Vercel AI SDK middleware that catches loops, hallucinations, and cost spikes.",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,13 +22,18 @@
     "test": "tsx --test 'test/**/*.test.ts'"
   },
   "peerDependencies": {
+    "@ai-sdk/provider": "^3.0.0",
     "ai": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/provider": { "optional": true }
   },
   "dependencies": {
     "@whoopsie/detectors": "workspace:*",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "^3.0.0",
     "ai": "^6.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",

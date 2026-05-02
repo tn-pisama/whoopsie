@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { redactObject, type RedactMode } from "./redact.js";
 import { TraceExporter } from "./exporter.js";
 import type { ToolCall, TraceEvent } from "./types.js";
@@ -80,6 +81,13 @@ export interface WhoopsieLanguageModelMiddleware {
 }
 
 export function whoopsieMiddleware(
+  opts: WhoopsieMiddlewareOptions = {},
+): LanguageModelV3Middleware {
+  const inner: WhoopsieLanguageModelMiddleware = buildMiddleware(opts);
+  return inner as unknown as LanguageModelV3Middleware;
+}
+
+function buildMiddleware(
   opts: WhoopsieMiddlewareOptions = {},
 ): WhoopsieLanguageModelMiddleware {
   const projectId =
