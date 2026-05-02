@@ -137,6 +137,40 @@ const model = wrapLanguageModel({
           </p>
         </Block>
 
+        <Block heading="TOS acceptance log">
+          <p>
+            When you check &ldquo;I agree&rdquo; on{" "}
+            <a
+              href="/install"
+              className="underline decoration-coral underline-offset-2"
+            >
+              /install
+            </a>{" "}
+            we record a single row to{" "}
+            <code className={GeistMono.className}>whoopsie_tos_acceptances</code>{" "}
+            with: timestamp, your IP, your user-agent string, the project ID
+            you were viewing (if any), and a version string identifying which
+            text of the terms you saw. This is the audit trail for{" "}
+            <a
+              href="/terms"
+              className="underline decoration-coral underline-offset-2"
+            >
+              /terms
+            </a>
+            ; without it we couldn&apos;t prove what you agreed to.
+          </p>
+          <p className="mt-3">
+            Acceptance rows are kept for the lifetime of the project. Email{" "}
+            <a
+              href="mailto:hi@whoopsie.dev"
+              className="underline decoration-coral underline-offset-2"
+            >
+              hi@whoopsie.dev
+            </a>{" "}
+            with your IP or project ID and we&apos;ll delete your row.
+          </p>
+        </Block>
+
         <Block heading="Where it lives">
           <p>
             Trace events are stored in a single Neon Postgres database in the

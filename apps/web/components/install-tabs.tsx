@@ -55,7 +55,7 @@ export function InstallTabs({
       <p className="mt-6 text-ink-muted">{platform.blurb}</p>
 
       <div className="mt-6">
-        <TermsGate>
+        <TermsGate projectId={projectId}>
           <CopyBlock text={platform.prompt} />
 
           <div className="mt-8 rounded-md border border-line bg-white p-4">

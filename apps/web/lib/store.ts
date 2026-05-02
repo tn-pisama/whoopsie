@@ -15,6 +15,14 @@ export interface AlertRecord {
   kind: string; // e.g. "first_failure"
 }
 
+export interface TosAcceptance {
+  projectId?: string;
+  termsVersion: string;
+  ip?: string;
+  userAgent?: string;
+  acceptedAt?: number;
+}
+
 export interface ContactWithAlerts {
   email: string;
   source: string;
@@ -41,6 +49,13 @@ export interface Store {
    * (projectId, email, kind) already existed (race-safe dedupe).
    */
   recordAlert(record: AlertRecord): Promise<{ recorded: boolean }>;
+  /**
+   * Records a TOS acceptance for audit purposes. Always inserts a new row
+   * (multiple acceptances per project_id are allowed — same user across
+   * browsers/devices, version updates, etc.). No-ops cleanly if storage
+   * fails so the user-facing checkbox never gets stuck.
+   */
+  recordTosAcceptance(record: TosAcceptance): Promise<void>;
   close?(): Promise<void>;
 }
 
@@ -69,6 +84,7 @@ export class MemoryStore implements Store {
   private channels = new Map<string, MemoryChannel>();
   private contacts = new Map<string, ContactRecord>();
   private alerts = new Set<string>();
+  private tosAcceptances: TosAcceptance[] = [];
 
   private channelFor(projectId: string): MemoryChannel {
     let ch = this.channels.get(projectId);
@@ -130,9 +146,19 @@ export class MemoryStore implements Store {
     return { recorded: true };
   }
 
+  async recordTosAcceptance(record: TosAcceptance): Promise<void> {
+    this.tosAcceptances.push({
+      ...record,
+      acceptedAt: record.acceptedAt ?? Date.now(),
+    });
+  }
+
   // Used by tests + admin scripts that drive MemoryStore directly.
   listContacts(): ContactRecord[] {
     return Array.from(this.contacts.values());
+  }
+  listTosAcceptances(): TosAcceptance[] {
+    return [...this.tosAcceptances];
   }
 }
 
@@ -169,6 +195,19 @@ const MIGRATION = `
   );
   CREATE UNIQUE INDEX IF NOT EXISTS whoopsie_email_alerts_proj_email_kind_idx
     ON whoopsie_email_alerts (project_id, lower(email), kind);
+
+  CREATE TABLE IF NOT EXISTS whoopsie_tos_acceptances (
+    id BIGSERIAL PRIMARY KEY,
+    project_id TEXT,
+    terms_version TEXT NOT NULL,
+    ip TEXT,
+    user_agent TEXT,
+    accepted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS whoopsie_tos_proj_idx
+    ON whoopsie_tos_acceptances (project_id);
+  CREATE INDEX IF NOT EXISTS whoopsie_tos_at_idx
+    ON whoopsie_tos_acceptances (accepted_at DESC);
 `;
 
 interface PgNotifyPayload {
@@ -295,6 +334,21 @@ export class PostgresStore implements Store {
       [record.projectId, record.email, record.kind],
     );
     return { recorded: res.rows.length > 0 };
+  }
+
+  async recordTosAcceptance(record: TosAcceptance): Promise<void> {
+    await this.migrate();
+    await this.pool.query(
+      `INSERT INTO whoopsie_tos_acceptances
+         (project_id, terms_version, ip, user_agent)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        record.projectId ?? null,
+        record.termsVersion,
+        record.ip ?? null,
+        record.userAgent ?? null,
+      ],
+    );
   }
 
   async close(): Promise<void> {

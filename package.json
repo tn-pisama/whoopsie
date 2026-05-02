@@ -17,6 +17,7 @@
     "synth": "pnpm --filter @whoopsie/synth start",
     "synth:once": "pnpm --filter @whoopsie/synth once",
     "contacts:list": "pnpm --filter @whoopsie/web exec tsx scripts/contacts.ts",
+    "tos:list": "pnpm --filter @whoopsie/web exec tsx scripts/tos.ts",
     "release": "pnpm -r --filter ./packages/* publish --access public --no-git-checks"
   },
   "devDependencies": {
