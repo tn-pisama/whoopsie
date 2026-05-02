@@ -11,12 +11,12 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "whoopsie:lovable-disclosure-dismissed";
 
 export function LovableNotReachable() {
-  const [dismissed, setDismissed] = useState<boolean | null>(null);
+  const [dismissed, setDismissed] = useState<boolean>(false);
   useEffect(() => {
     try {
-      setDismissed(window.localStorage.getItem(STORAGE_KEY) === "1");
+      if (window.localStorage.getItem(STORAGE_KEY) === "1") setDismissed(true);
     } catch {
-      setDismissed(false);
+      // ignore
     }
   }, []);
 
