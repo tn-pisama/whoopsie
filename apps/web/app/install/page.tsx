@@ -1,18 +1,9 @@
 import { GeistMono } from "geist/font/mono";
 import { InstallPageShell } from "@/components/install-page-shell";
-import { platforms, getPlatform } from "@/lib/install-prompts";
+import { platforms } from "@/lib/install-prompts";
 import { newProjectId } from "@/lib/project-id";
 
 export const dynamic = "force-dynamic";
-
-const PROMPTS = Object.fromEntries(
-  platforms.map((p) => [p.slug, p.template]),
-) as Record<string, (id: string) => string>;
-
-function buildPromptFor(slug: string, projectId: string): string {
-  const fn = PROMPTS[slug] ?? getPlatform(platforms[0]!.slug)!.template;
-  return fn(projectId);
-}
 
 export default async function InstallPage({
   searchParams,
@@ -33,10 +24,11 @@ export default async function InstallPage({
   const initial =
     typeof params.platform === "string" ? params.platform : "cursor";
 
-  const platformViews = platforms.map((p) => ({
+  const platformsForServerId = platforms.map((p) => ({
     slug: p.slug,
     name: p.name,
     blurb: p.blurb,
+    prompt: p.template(serverProjectId),
   }));
 
   return (
@@ -77,8 +69,7 @@ export default async function InstallPage({
       <InstallPageShell
         initial={initial}
         serverProjectId={serverProjectId}
-        platforms={platformViews}
-        buildPrompt={buildPromptFor}
+        platformsForServerId={platformsForServerId}
       />
 
       <footer className="border-t border-line py-12 font-mono text-xs text-ink-muted">
