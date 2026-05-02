@@ -194,30 +194,55 @@ const model = wrapLanguageModel({
               className="underline decoration-coral underline-offset-2"
             >
               Tuomo Nikulainen
-            </a>
-            . Single maintainer, not a company yet. The product is the
-            vibe-coder cut of{" "}
+            </a>{" "}
+            as the vibe-coder cut of{" "}
             <a
               href="https://pisama.ai"
               className="underline decoration-coral underline-offset-2"
             >
               Pisama
             </a>
-            , a multi-agent failure detection platform with the same author.
+            , a multi-agent failure detection platform with the same
+            maintainer. Pisama is the entity behind both products; the same
+            data handling and security posture apply.
+          </p>
+          <p className="mt-3">
+            For security disclosures see{" "}
+            <a
+              href="https://github.com/tn-pisama/whoopsie/blob/main/SECURITY.md"
+              className="underline decoration-coral underline-offset-2"
+            >
+              SECURITY.md
+            </a>{" "}
+            (mail{" "}
+            <a
+              href="mailto:security@whoopsie.dev"
+              className="underline decoration-coral underline-offset-2"
+            >
+              security@whoopsie.dev
+            </a>
+            , backup{" "}
+            <a
+              href="mailto:tuomo@pisama.ai"
+              className="underline decoration-coral underline-offset-2"
+            >
+              tuomo@pisama.ai
+            </a>
+            ). For data deletion or general questions:{" "}
+            <a
+              href="mailto:hi@whoopsie.dev"
+              className="underline decoration-coral underline-offset-2"
+            >
+              hi@whoopsie.dev
+            </a>
+            .
           </p>
           <p className="mt-3">
             If you&apos;re security-sensitive: this is a new project. The
             packages were first published on 2026-05-01. Download counts will
             be low for a while. Treat it accordingly — try metadata-only mode
             first, run on a side project before production, and read the
-            source. If something looks off, open an issue at{" "}
-            <a
-              href="https://github.com/tn-pisama/whoopsie/issues"
-              className="underline decoration-coral underline-offset-2"
-            >
-              github.com/tn-pisama/whoopsie/issues
-            </a>
-            .
+            source.
           </p>
         </Block>
 
