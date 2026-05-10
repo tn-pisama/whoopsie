@@ -40,11 +40,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  const events = parseEvents(body);
-  if (!events) {
+  const parsed = parseEvents(body);
+  if (!parsed) {
     return NextResponse.json({ error: "missing events array" }, { status: 400 });
   }
-  if (events.length > 200) {
+  const { events, malformedCount } = parsed;
+  if (events.length + malformedCount > 200) {
     return NextResponse.json(
       { error: "events array too large (max 200 per request)" },
       { status: 413 },
@@ -79,10 +80,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const detections: { traceId: string; hits: ReturnType<typeof runDetectors> }[] = [];
+  const failed: { traceId: string; reason: string }[] = [];
+  let persisted = 0;
+  let missingProjectId = 0;
 
   for (const event of events) {
     const projectId = event.projectId || headerPid;
-    if (!projectId) continue;
+    if (!projectId) {
+      missingProjectId += 1;
+      failed.push({ traceId: event.traceId, reason: "missing_project_id" });
+      continue;
+    }
 
     const trace: AgentTrace = {
       traceId: event.traceId,
@@ -110,10 +118,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       console.error("[whoopsie] detector error", err);
     }
 
+    // Persistence is the only step that determines `accepted`. If publish
+    // throws, the row didn't make it to Postgres — surface the failure so
+    // a retry-aware client can resend, instead of silently losing data.
     try {
       await publish(projectId, { event, hits });
+      persisted += 1;
+      detections.push({ traceId: event.traceId, hits });
     } catch (err) {
       console.error("[whoopsie] publish error", err);
+      failed.push({ traceId: event.traceId, reason: "persist_failed" });
+      // Skip downstream side-effects (contact capture, alerts) when the
+      // canonical record didn't persist — they'd be ghosts otherwise.
+      continue;
     }
 
     // Auto-capture contact email from SDK middleware metadata.
@@ -150,11 +167,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         console.error("[whoopsie] alert send error", err);
       }
     }
-
-    detections.push({ traceId: event.traceId, hits });
   }
 
-  return NextResponse.json({ accepted: events.length, detections });
+  const submitted = events.length + malformedCount;
+  const rejected = {
+    malformed: malformedCount,
+    missingProjectId,
+    persistFailed: failed.filter((f) => f.reason === "persist_failed").length,
+  };
+  const body207 = { accepted: persisted, submitted, detections, failed, rejected };
+
+  // All events failed to persist → upstream durability error.
+  if (persisted === 0 && rejected.persistFailed > 0) {
+    return NextResponse.json({ ...body207, error: "persist_failed" }, { status: 502 });
+  }
+  // Partial drops → 207 Multi-Status so retry-aware clients can act.
+  if (persisted < submitted) {
+    return NextResponse.json(body207, { status: 207 });
+  }
+  return NextResponse.json({ accepted: persisted, detections });
 }
 
 export async function OPTIONS(): Promise<Response> {
@@ -168,11 +199,19 @@ export async function OPTIONS(): Promise<Response> {
   });
 }
 
-function parseEvents(body: unknown): TraceEvent[] | null {
+function parseEvents(
+  body: unknown,
+): { events: TraceEvent[]; malformedCount: number } | null {
   if (!body || typeof body !== "object") return null;
-  const events = (body as { events?: unknown }).events;
-  if (!Array.isArray(events)) return null;
-  return events.filter(isTraceEvent);
+  const raw = (body as { events?: unknown }).events;
+  if (!Array.isArray(raw)) return null;
+  const events: TraceEvent[] = [];
+  let malformedCount = 0;
+  for (const v of raw) {
+    if (isTraceEvent(v)) events.push(v);
+    else malformedCount += 1;
+  }
+  return { events, malformedCount };
 }
 
 function isTraceEvent(v: unknown): v is TraceEvent {
