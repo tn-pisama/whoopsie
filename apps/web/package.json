@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/gateway": "ai-v6",
     "@ai-sdk/provider": "^3.0.0",
+    "@vercel/analytics": "^2.0.1",
     "@whoopsie/detectors": "workspace:*",
     "@whoopsie/sdk": "workspace:*",
     "ai": "^6.0.0",
