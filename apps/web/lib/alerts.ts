@@ -1,8 +1,9 @@
 // Send-on-first-failure email alerts. Currently the only alert kind is
 // `first_failure`: a contact's first detector hit on their project.
 //
-// Gated on RESEND_API_KEY. If unset, sendFirstFailureAlerts is a no-op so
-// the rest of the ingest pipeline keeps working without email infra.
+// Disabled by default: requires WHOOPSIE_ALERTS_ENABLED=1 AND RESEND_API_KEY
+// to be set. The feature was disabled when we declined to disclose Resend as
+// a sub-processor on /privacy — re-enable only after the disclosure lands.
 
 import type { Store } from "./store";
 import type { TraceWithHits } from "./types";
@@ -141,6 +142,7 @@ export interface AlertResult {
   sent: number;
   failed: number;
   skippedNoKey: boolean;
+  skippedDisabled: boolean;
 }
 
 /**
@@ -159,8 +161,14 @@ export async function sendFirstFailureAlerts(
     sent: 0,
     failed: 0,
     skippedNoKey: false,
+    skippedDisabled: false,
   };
   if (trace.hits.length === 0) return result;
+
+  if (process.env.WHOOPSIE_ALERTS_ENABLED !== "1") {
+    result.skippedDisabled = true;
+    return result;
+  }
 
   if (!process.env.RESEND_API_KEY) {
     result.skippedNoKey = true;

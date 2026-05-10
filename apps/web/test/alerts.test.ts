@@ -70,8 +70,34 @@ test("MemoryStore.recordAlert is idempotent and case-insensitive", async () => {
   assert.equal(r2.recorded, false);
 });
 
+test("sendFirstFailureAlerts skips quietly when feature flag off", async () => {
+  const originalFlag = process.env.WHOOPSIE_ALERTS_ENABLED;
+  const originalKey = process.env.RESEND_API_KEY;
+  delete process.env.WHOOPSIE_ALERTS_ENABLED;
+  process.env.RESEND_API_KEY = "test_key"; // even with key set, flag-off wins
+  try {
+    const s = new MemoryStore();
+    await s.saveContact({
+      projectId: "ws_a",
+      email: "alice@example.com",
+      source: "install_page",
+      createdAt: 0,
+    });
+    const r = await sendFirstFailureAlerts(s, "ws_a", trace([loopHit]));
+    assert.equal(r.skippedDisabled, true);
+    assert.equal(r.attempted, 0);
+    assert.equal(r.sent, 0);
+  } finally {
+    if (originalFlag !== undefined) process.env.WHOOPSIE_ALERTS_ENABLED = originalFlag;
+    if (originalKey !== undefined) process.env.RESEND_API_KEY = originalKey;
+    else delete process.env.RESEND_API_KEY;
+  }
+});
+
 test("sendFirstFailureAlerts skips quietly when RESEND_API_KEY unset", async () => {
-  const original = process.env.RESEND_API_KEY;
+  const originalFlag = process.env.WHOOPSIE_ALERTS_ENABLED;
+  const originalKey = process.env.RESEND_API_KEY;
+  process.env.WHOOPSIE_ALERTS_ENABLED = "1";
   delete process.env.RESEND_API_KEY;
   try {
     const s = new MemoryStore();
@@ -86,11 +112,14 @@ test("sendFirstFailureAlerts skips quietly when RESEND_API_KEY unset", async () 
     assert.equal(r.attempted, 0);
     assert.equal(r.sent, 0);
   } finally {
-    if (original !== undefined) process.env.RESEND_API_KEY = original;
+    if (originalFlag !== undefined) process.env.WHOOPSIE_ALERTS_ENABLED = originalFlag;
+    else delete process.env.WHOOPSIE_ALERTS_ENABLED;
+    if (originalKey !== undefined) process.env.RESEND_API_KEY = originalKey;
   }
 });
 
 test("sendFirstFailureAlerts is a no-op when there are no hits", async () => {
+  process.env.WHOOPSIE_ALERTS_ENABLED = "1";
   process.env.RESEND_API_KEY = "test_key";
   try {
     const s = new MemoryStore();
@@ -104,13 +133,14 @@ test("sendFirstFailureAlerts is a no-op when there are no hits", async () => {
     assert.equal(r.attempted, 0);
     assert.equal(r.sent, 0);
   } finally {
+    delete process.env.WHOOPSIE_ALERTS_ENABLED;
     delete process.env.RESEND_API_KEY;
   }
 });
 
 test("sendFirstFailureAlerts records the alert (dedupes future runs) even if Resend fails", async () => {
+  process.env.WHOOPSIE_ALERTS_ENABLED = "1";
   process.env.RESEND_API_KEY = "test_key_that_will_404";
-  // Hijack fetch to simulate a Resend failure.
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () =>
     new Response(
@@ -129,18 +159,17 @@ test("sendFirstFailureAlerts records the alert (dedupes future runs) even if Res
     assert.equal(r1.attempted, 1);
     assert.equal(r1.sent, 0);
     assert.equal(r1.failed, 1);
-    // Second invocation should find no recipients (alert was recorded
-    // before the send, so dedupe is permanent — better miss-once than
-    // spam-twice).
     const r2 = await sendFirstFailureAlerts(s, "ws_a", trace([loopHit]));
     assert.equal(r2.attempted, 0);
   } finally {
     globalThis.fetch = originalFetch;
+    delete process.env.WHOOPSIE_ALERTS_ENABLED;
     delete process.env.RESEND_API_KEY;
   }
 });
 
 test("sendFirstFailureAlerts: happy-path Resend mock", async () => {
+  process.env.WHOOPSIE_ALERTS_ENABLED = "1";
   process.env.RESEND_API_KEY = "test_key_ok";
   const calls: { url: string; body: { to?: string[]; subject?: string } }[] = [];
   const originalFetch = globalThis.fetch;
@@ -171,6 +200,7 @@ test("sendFirstFailureAlerts: happy-path Resend mock", async () => {
     assert.match(calls[0]!.body.subject ?? "", /loop/i);
   } finally {
     globalThis.fetch = originalFetch;
+    delete process.env.WHOOPSIE_ALERTS_ENABLED;
     delete process.env.RESEND_API_KEY;
   }
 });

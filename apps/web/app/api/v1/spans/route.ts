@@ -212,8 +212,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // First-failure email alerts. No-op when RESEND_API_KEY is unset, when
-    // there are no hits, or when there are no contacts awaiting alerts.
+    // First-failure email alerts. Disabled by default; requires
+    // WHOOPSIE_ALERTS_ENABLED=1 and RESEND_API_KEY. Re-enable only after
+    // disclosing Resend as a sub-processor on /privacy.
     if (hits.length > 0) {
       try {
         const store = await getStore();
