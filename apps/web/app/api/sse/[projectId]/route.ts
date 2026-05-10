@@ -6,6 +6,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const HEARTBEAT_MS = 25_000;
+// Polling fallback: pg_notify isn't reliable on Vercel's serverless runtime
+// because the LISTEN client can be dropped silently when Neon idles or the
+// function instance is recycled. Polling every POLL_MS guarantees we catch
+// any trace within bounded latency, with traceId-based dedupe to avoid
+// double-emitting events that arrive on both the listener and the poll.
+const POLL_MS = 2_000;
+const SEEN_CAP = 1_000;
 const ENCODER = new TextEncoder();
 
 export async function GET(
@@ -27,11 +34,30 @@ export async function GET(
         }
       };
 
+      // Seen-set is a bounded FIFO of traceIds we've already emitted on this
+      // connection. Entries older than the cap get dropped — fine because by
+      // then the dashboard has already received them.
+      const seen: string[] = [];
+      const seenSet = new Set<string>();
+      const markSeen = (traceId: string): boolean => {
+        if (seenSet.has(traceId)) return false;
+        seenSet.add(traceId);
+        seen.push(traceId);
+        if (seen.length > SEEN_CAP) {
+          const dropped = seen.shift();
+          if (dropped) seenSet.delete(dropped);
+        }
+        return true;
+      };
+
       const recentBuffer = await recent(projectId, 50);
+      for (const t of recentBuffer) markSeen(t.event.traceId);
       send("hello", { projectId, recent: recentBuffer });
 
       const onTrace = (payload: TraceWithHits): void => {
-        send("trace", payload);
+        if (markSeen(payload.event.traceId)) {
+          send("trace", payload);
+        }
       };
       const unsubscribe = await subscribe(projectId, onTrace);
 
@@ -39,8 +65,24 @@ export async function GET(
         send("heartbeat", { t: Date.now() });
       }, HEARTBEAT_MS);
 
+      const poll = setInterval(() => {
+        void (async () => {
+          try {
+            const rows = await recent(projectId, 50);
+            for (const row of rows) {
+              if (markSeen(row.event.traceId)) {
+                send("trace", row);
+              }
+            }
+          } catch (err) {
+            console.error("[whoopsie] sse poll failed", err);
+          }
+        })();
+      }, POLL_MS);
+
       const close = (): void => {
         clearInterval(heartbeat);
+        clearInterval(poll);
         unsubscribe();
         try {
           controller.close();
