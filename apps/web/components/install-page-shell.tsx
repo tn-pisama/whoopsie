@@ -95,13 +95,9 @@ npx -y @whoopsie/cli init
 
 # or manually:
 pnpm add @whoopsie/sdk
-# then wrap your model:
-#   import { wrapLanguageModel } from "ai";
-#   import { whoopsieMiddleware } from "@whoopsie/sdk";
-#   const model = wrapLanguageModel({
-#     model: openai("gpt-4o"),
-#     middleware: whoopsieMiddleware({ redact: "metadata-only" }),
-#   });`}
+# then wrap your model in one call:
+#   import { observe } from "@whoopsie/sdk";
+#   const model = observe(openai("gpt-4o"), { redact: "metadata-only" });`}
         </pre>
         <p className="mt-3 text-xs text-ink-muted">
           Set{" "}

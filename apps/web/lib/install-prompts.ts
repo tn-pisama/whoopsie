@@ -27,28 +27,30 @@ The package is @whoopsie/sdk. It's a Vercel AI SDK middleware that streams trace
 - privacy / data handling: https://whoopsie.dev/privacy
 - license: MIT
 
-For first install I want the safest default — metadata-only mode, where the SDK ships token counts, finish reasons, tool names, and detector verdicts but zero prompt or completion text. Per the README:
+For first install I want the safest default — metadata-only mode, where the SDK ships token counts, finish reasons, tool names, and detector verdicts but zero prompt or completion text.
+
+**Use the \`observe()\` helper. It's a single function call — do not write your own \`wrapLanguageModel\` pattern.** This matters because past installs failed silently when AI agents reconstructed the wrap incorrectly. The correct usage is exactly:
 
 \`\`\`ts
-import { wrapLanguageModel } from "ai";
-import { whoopsieMiddleware } from "@whoopsie/sdk";
+import { observe } from "@whoopsie/sdk";
 
 // before:
 //   model: openai("gpt-4o"),
 // after — wrap whatever model is currently there:
-const model = wrapLanguageModel({
-  model: openai("gpt-4o"),
-  middleware: whoopsieMiddleware({ redact: "metadata-only" }),
-});
+const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 \`\`\`
+
+That's it. Do not import \`wrapLanguageModel\` from "ai". Do not call \`whoopsieMiddleware(...)\` directly. Do not pass the middleware as an option — \`observe(model, opts)\` returns the wrapped model.
 
 Could you:
 
 1. First: check whether my project actually has a \`streamText\` or \`generateText\` call from the \`ai\` package (usually under \`app/api/...\`). If there's no such call yet, just tell me and don't install anything.
-2. If there is one: add \`@whoopsie/sdk\` as a dependency and apply the wrap above to whatever model expression is already there. Keep the existing model; only wrap it.
-3. Tell me which file you changed.
+2. If there is one: add \`@whoopsie/sdk\` as a dependency and replace the existing model expression with \`observe(<existing>, { redact: "metadata-only" })\`. Keep the underlying model; only wrap it.
+3. Tell me which file you changed and the exact line you changed.
 
-I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}. If you'd rather wait until the package has more adoption, suggest a more established alternative (Langfuse, Helicone, Sentry AI, OpenTelemetry) and I'll consider it.`;
+I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}. After install, send one chat message in the running app — a trace should appear at that dashboard within ~2 seconds. If it doesn't, the wrap was applied incorrectly; revisit step 2.
+
+If you'd rather wait until the package has more adoption, suggest a more established alternative (Langfuse, Helicone, Sentry AI, OpenTelemetry) and I'll consider it.`;
 
 export const platforms: PlatformPrompt[] = [
   {

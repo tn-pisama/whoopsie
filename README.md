@@ -31,7 +31,7 @@ npx @whoopsie/cli init
 The CLI:
 
 1. Detects `ai` + `next` in your `package.json`.
-2. Wraps your first `streamText` / `generateText` call with `whoopsieMiddleware()`.
+2. Wraps your first `streamText` / `generateText` call with `observe()`.
 3. Writes `WHOOPSIE_PROJECT_ID` to `.env.local`.
 4. Opens `https://whoopsie.dev/live/<your-project-id>`.
 
@@ -87,7 +87,7 @@ Persona drift, multi-agent coordination, and embedding-grade grounding are out o
 PII redaction runs in the SDK before bytes leave the machine, and again on the ingest server before anything is written to Postgres. Defaults catch emails, phones, SSNs, credit-card-shaped numbers, JWTs, and OpenAI/Anthropic/AWS/GitHub/Slack-shaped keys.
 
 ```ts
-whoopsieMiddleware({ redact: "metadata-only" });
+observe(model, { redact: "metadata-only" });
 ```
 
 `metadata-only` ships span shape, token counts, and detector verdicts with zero prompt or completion text. Use it when you cannot send any prompt content off-machine.

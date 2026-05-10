@@ -5,26 +5,39 @@ pnpm add @whoopsie/sdk
 ```
 
 ```ts
-import { wrapLanguageModel, streamText } from "ai";
-import { whoopsieMiddleware } from "@whoopsie/sdk";
+import { observe } from "@whoopsie/sdk";
+import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
-const model = wrapLanguageModel({
-  model: openai("gpt-4o"),
-  middleware: whoopsieMiddleware(),
-});
+const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 const result = await streamText({ model, prompt: "..." });
 ```
 
 Set `WHOOPSIE_PROJECT_ID` in `.env.local`. Get yours from `npx whoopsie init` (or sign up at https://whoopsie.dev).
 
-### Privacy
+`observe(model, opts)` is the canonical entry point. It returns the model with whoopsie's middleware attached — one function call, no `wrapLanguageModel` ceremony.
 
-PII is redacted in the SDK before bytes leave the machine. Default mode is `standard` (emails, phones, cards, JWTs, provider API keys). Pass `redact: 'aggressive'` for more, `'metadata-only'` for token counts and detector verdicts only, or `'off'` to disable.
+### Advanced
+
+If you need direct access to the middleware (e.g. you're composing multiple middlewares), import `whoopsieMiddleware` and pass it to `wrapLanguageModel` yourself:
 
 ```ts
-whoopsieMiddleware({ redact: "metadata-only" });
+import { wrapLanguageModel } from "ai";
+import { whoopsieMiddleware } from "@whoopsie/sdk";
+
+const model = wrapLanguageModel({
+  model: openai("gpt-4o"),
+  middleware: [whoopsieMiddleware(), yourOtherMiddleware],
+});
+```
+
+### Privacy
+
+PII is redacted in the SDK before bytes leave the machine. Default mode is `standard` (emails, phones, SSNs, cards, JWTs, OpenAI/Anthropic/AWS/GitHub/Slack-shaped API keys). Pass `redact: 'aggressive'` for more, `'metadata-only'` for token counts and detector verdicts only, or `'off'` to disable. The ingest server re-runs the same redaction patterns before writing to storage — defense in depth.
+
+```ts
+observe(model, { redact: "metadata-only" });
 ```
 
 ### License

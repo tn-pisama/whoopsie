@@ -1,14 +1,16 @@
 "use client";
 
-// Honest, dismissable disclosure. Lovable's supply-chain defenses are
-// strong enough that they will currently refuse to install whoopsie
-// (low adoption + recent publish + new domain). Other AI builders are
-// more permissive, but we shouldn't pretend the Lovable path works
-// today when it provably doesn't.
+// Cross-platform install-verification disclosure. AI builders on every platform
+// we tested (v0, Lovable, Replit, Bolt) accepted the install prompt but a
+// meaningful fraction wrote the middleware wrap incorrectly — sometimes failing
+// loudly (500s) and sometimes silently (chat works, zero traces fire). The
+// shipped install prompt now uses the single-call `observe()` helper to
+// minimize that failure surface, but verification on the user side is still
+// the only thing that proves the install actually worked.
 
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "whoopsie:lovable-disclosure-dismissed";
+const STORAGE_KEY = "whoopsie:install-verify-dismissed-v2";
 
 export function LovableNotReachable() {
   const [dismissed, setDismissed] = useState<boolean>(false);
@@ -24,19 +26,22 @@ export function LovableNotReachable() {
 
   return (
     <div className="mt-8 rounded-md border border-coral/40 bg-coral-soft/30 p-5 text-sm text-ink-soft">
-      <p className="font-medium text-ink">Heads-up about Lovable specifically</p>
+      <p className="font-medium text-ink">After install, verify a trace lands</p>
       <p className="mt-2">
-        Lovable will currently <strong>refuse</strong> to install whoopsie. Their
-        AI checks for adoption signal before installing new packages, and
-        whoopsie is a few days old. That&apos;s the right call — it&apos;s the
-        same defense we&apos;d want against an actual supply-chain attack.
+        AI builders sometimes accept the install prompt confidently and then
+        write the wrap incorrectly — silently. The cure is one quick check:
+        send <strong>one chat message</strong> in your running app and confirm a
+        trace appears on your live dashboard within ~2 seconds. If nothing
+        lands, the AI rewrote the wrap into something that doesn&apos;t
+        invoke whoopsie&apos;s middleware. Re-paste the prompt and ask it to
+        use the <code className="font-mono">observe()</code> helper exactly as
+        written.
       </p>
       <p className="mt-2">
-        Until whoopsie has a few independent users, the Lovable tab here is
-        aspirational. <strong>Replit, Bolt, Cursor, and v0 all currently work</strong>{" "}
-        because they expose terminals and let you do the install yourself
-        instead of asking the AI to take the trust risk. The terminal path
-        below also works.
+        Lovable is a special case: it builds on TanStack Start (React 19 + Vite),
+        not Next.js. The integration code path is different, and our tests have
+        shown it&apos;s the most likely platform to silently no-op. Verify
+        carefully there.
       </p>
       <button
         type="button"
