@@ -2,6 +2,11 @@ import { nanoid } from "nanoid";
 import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
 import { redactObject, type RedactMode } from "./redact.js";
 import { TraceExporter } from "./exporter.js";
+import {
+  logEnabled,
+  maybeStartSilenceWarning,
+  noteEventEnqueued,
+} from "./diagnostics.js";
 import type { ToolCall, TraceEvent } from "./types.js";
 
 export interface WhoopsieMiddlewareOptions {
@@ -117,6 +122,11 @@ function buildMiddleware(
     baseMetadata.contact = opts.contact;
   }
 
+  // Loud-by-default diagnostics. Silent failure was the most common integration
+  // bug on AI builder platforms; these logs surface it the moment it happens.
+  logEnabled(projectId, redactMode);
+  maybeStartSilenceWarning(projectId);
+
   return {
     specificationVersion: "v3",
 
@@ -140,6 +150,7 @@ function buildMiddleware(
             metadata: baseMetadata,
           }),
         );
+        noteEventEnqueued();
         return result;
       } catch (error) {
         exporter.enqueue(
@@ -156,6 +167,7 @@ function buildMiddleware(
             metadata: baseMetadata,
           }),
         );
+        noteEventEnqueued();
         throw error;
       }
     },
@@ -183,6 +195,7 @@ function buildMiddleware(
             metadata: baseMetadata,
           }),
         );
+        noteEventEnqueued();
         throw error;
       }
 
@@ -213,6 +226,7 @@ function buildMiddleware(
               metadata: baseMetadata,
             }),
           );
+          noteEventEnqueued();
         },
       });
 

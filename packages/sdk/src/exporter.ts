@@ -59,8 +59,10 @@ export class TraceExporter {
       return;
     }
     const batch = this.buffer.splice(0, this.buffer.length);
+    const debug =
+      typeof process !== "undefined" && process.env.WHOOPSIE_DEBUG === "1";
     try {
-      await this.fetchImpl(this.endpoint, {
+      const res = await this.fetchImpl(this.endpoint, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -69,8 +71,21 @@ export class TraceExporter {
         body: JSON.stringify({ events: batch }),
         keepalive: true,
       });
-    } catch {
-      // Silent failure: telemetry must never break the host app.
+      if (debug) {
+        console.log(
+          `[whoopsie] flushed ${batch.length} event(s) → HTTP ${res.status}`,
+        );
+      }
+    } catch (err) {
+      // Silent in production: telemetry must never break the host app. Debug
+      // mode surfaces the underlying error so misconfigured network egress
+      // (sandboxed runtimes, blocked outbound, etc.) shows up.
+      if (debug) {
+        console.warn(
+          `[whoopsie] flush failed (suppressed in production):`,
+          (err as Error)?.message ?? err,
+        );
+      }
     }
   }
 

@@ -40,6 +40,21 @@ PII is redacted in the SDK before bytes leave the machine. Default mode is `stan
 observe(model, { redact: "metadata-only" });
 ```
 
+### Diagnostics
+
+The SDK is loud by default about whether it's wired correctly. On first model call, you'll see:
+
+```
+[whoopsie] enabled · project=ws_abc123… · redact=metadata-only
+```
+
+If no events fire within 30 seconds, the SDK logs a warning with the most common causes (wrong wrap, file not imported, missing env var, blocked egress) and a link to verify on your dashboard. This catches silent integration failures that previously looked identical to working integration.
+
+Env vars to tune verbosity:
+
+- `WHOOPSIE_DEBUG=1` — also logs every flush with HTTP status. Useful when integration is silently failing and you want to see what's happening.
+- `WHOOPSIE_SILENT=1` — suppresses all SDK logging. Use in noise-sensitive production environments after you've verified the integration works.
+
 ### License
 
 MIT
