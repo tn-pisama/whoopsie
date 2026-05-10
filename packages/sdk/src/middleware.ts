@@ -282,7 +282,7 @@ function buildFromGenerate(
     .map((c) => ({
       toolCallId: String(c.toolCallId ?? ""),
       toolName: String(c.toolName ?? ""),
-      args: parseJson(c.input),
+      args: redactObject(parseJson(c.input), rest.redactMode),
       startTime: rest.startTime,
     }));
 
@@ -318,7 +318,11 @@ function buildFromStream(
     completion: collected.text
       ? redactObject(collected.text, rest.redactMode)
       : undefined,
-    toolCalls: collected.toolCalls,
+    toolCalls: collected.toolCalls.map((tc) => ({
+      ...tc,
+      args: redactObject(tc.args, rest.redactMode),
+      result: redactObject(tc.result, rest.redactMode),
+    })),
     inputTokens: collected.usage?.inputTokens?.total,
     outputTokens: collected.usage?.outputTokens?.total,
     finishReason: collected.finishReason,

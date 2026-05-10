@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDetectors, type AgentTrace } from "@whoopsie/detectors";
+import { redactObject, type RedactMode } from "@whoopsie/sdk";
 import { getStore, publish } from "@/lib/bus";
 import { sendFirstFailureAlerts } from "@/lib/alerts";
 import {
@@ -7,9 +8,57 @@ import {
   rateLimitSpansProject,
   rateLimitSpansRequest,
 } from "@/lib/rate-limit";
-import type { TraceEvent } from "@/lib/types";
+import type { TraceEvent, ToolCall } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// Server-side redaction is defense-in-depth. The SDK already redacts before
+// transmission, but a direct API caller (curl, custom client, leaked SDK
+// version with a bug) bypasses that. We always re-redact every event before
+// it reaches the detector or Postgres, so raw PII never lands in our store.
+const SERVER_REDACT_MODE: RedactMode = "standard";
+
+// Allowlist of metadata keys that pass through unredacted. `contact` is the
+// opt-in alert email and is validated/stored separately. Anything else under
+// metadata is treated as free-form user content and scrubbed.
+const METADATA_PASSTHROUGH_KEYS = new Set(["contact"]);
+
+function scrubMetadata(meta: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    out[k] = METADATA_PASSTHROUGH_KEYS.has(k)
+      ? v
+      : redactObject(v, SERVER_REDACT_MODE);
+  }
+  return out;
+}
+
+function scrubEvent(event: TraceEvent): TraceEvent {
+  return {
+    ...event,
+    prompt:
+      event.prompt !== undefined
+        ? redactObject(event.prompt, SERVER_REDACT_MODE)
+        : undefined,
+    completion:
+      event.completion !== undefined
+        ? redactObject(event.completion, SERVER_REDACT_MODE)
+        : undefined,
+    toolCalls: event.toolCalls.map(
+      (tc): ToolCall => ({
+        ...tc,
+        args: redactObject(tc.args, SERVER_REDACT_MODE),
+        result: redactObject(tc.result, SERVER_REDACT_MODE),
+      }),
+    ),
+    error: event.error
+      ? {
+          ...event.error,
+          message: redactObject(event.error.message, SERVER_REDACT_MODE),
+        }
+      : undefined,
+    metadata: scrubMetadata(event.metadata ?? {}),
+  };
+}
 // In-memory short-circuit so we don't hit the store on every event for the
 // same {projectId, email} pair. Cleared on cold start; safe.
 const seenContacts = new Set<string>();
@@ -84,13 +133,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let persisted = 0;
   let missingProjectId = 0;
 
-  for (const event of events) {
-    const projectId = event.projectId || headerPid;
+  for (const rawEvent of events) {
+    const projectId = rawEvent.projectId || headerPid;
     if (!projectId) {
       missingProjectId += 1;
-      failed.push({ traceId: event.traceId, reason: "missing_project_id" });
+      failed.push({ traceId: rawEvent.traceId, reason: "missing_project_id" });
       continue;
     }
+
+    // Defense-in-depth scrub. Everything past this point sees redacted text;
+    // raw user PII never reaches detectors, the bus, alerts, or Postgres.
+    // The opt-in contact email in metadata is preserved (it's a deliverable
+    // address, not user data).
+    const event = scrubEvent(rawEvent);
 
     const trace: AgentTrace = {
       traceId: event.traceId,

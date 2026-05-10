@@ -3,6 +3,7 @@ export type RedactMode = "off" | "standard" | "aggressive" | "metadata-only";
 const STANDARD_PATTERNS: Array<[RegExp, string]> = [
   [/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[email]"],
   [/\b(?:\+?\d{1,3}[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}\b/g, "[phone]"],
+  [/\b\d{3}-\d{2}-\d{4}\b/g, "[ssn]"],
   [/\b(?:\d[ -]?){13,19}\b/g, "[card]"],
   [/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt]"],
   [/sk-[A-Za-z0-9]{20,}/g, "[openai-key]"],
@@ -13,7 +14,6 @@ const STANDARD_PATTERNS: Array<[RegExp, string]> = [
 ];
 
 const AGGRESSIVE_EXTRA: Array<[RegExp, string]> = [
-  [/\b\d{3}-\d{2}-\d{4}\b/g, "[ssn]"],
   [/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g, "[ip]"],
   [/\bhttps?:\/\/[^\s)]+/g, "[url]"],
   [/\b[A-Z][a-z]+ [A-Z][a-z]+\b/g, "[name]"],
