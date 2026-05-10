@@ -84,15 +84,13 @@ Persona drift, multi-agent coordination, and embedding-grade grounding are out o
 
 ## Privacy posture
 
-PII redaction runs in the SDK before bytes leave the machine. Defaults catch emails, phones, credit-card-shaped numbers, JWTs, and OpenAI/Anthropic/AWS/Slack-shaped keys.
+PII redaction runs in the SDK before bytes leave the machine, and again on the ingest server before anything is written to Postgres. Defaults catch emails, phones, SSNs, credit-card-shaped numbers, JWTs, and OpenAI/Anthropic/AWS/GitHub/Slack-shaped keys.
 
 ```ts
 whoopsieMiddleware({ redact: "metadata-only" });
 ```
 
 `metadata-only` ships span shape, token counts, and detector verdicts with zero prompt or completion text. Use it when you cannot send any prompt content off-machine.
-
-`WHOOPSIE_LOCAL=1` (planned for v0.2) will run an offline dashboard against a local SQLite store, with nothing leaving your laptop.
 
 Hosted ingest has a 7-day rolling delete and no retention upsell.
 

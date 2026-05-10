@@ -1,10 +1,12 @@
 import { GeistMono } from "geist/font/mono";
 
 export const metadata = {
-  title: "Privacy & data handling — whoopsie",
+  title: "Privacy — whoopsie",
   description:
-    "What whoopsie stores, what it redacts, how long it keeps it, and how to send nothing but metadata.",
+    "What whoopsie collects, where it goes, how long it stays, and how to delete it.",
 };
+
+const LAST_UPDATED = "2026-05-09";
 
 export default function PrivacyPage() {
   return (
@@ -18,252 +20,117 @@ export default function PrivacyPage() {
         </a>
         <nav className="flex items-center gap-6 font-mono text-xs text-ink-muted">
           <a href="/install" className="hover:text-ink">install</a>
+          <a href="/terms" className="hover:text-ink">terms</a>
           <a href="https://github.com/tn-pisama/whoopsie" className="hover:text-ink">github</a>
         </nav>
       </header>
 
       <section className="py-10">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          What whoopsie sees, and what it doesn&apos;t.
+          Privacy, in plain English.
         </h1>
         <p className="mt-4 max-w-2xl text-ink-muted">
-          Plain answers, no marketing. Whoopsie&apos;s middleware sits inside your
-          app and forwards trace events about your AI calls to{" "}
-          <code className={GeistMono.className}>whoopsie.dev</code>. That&apos;s
-          a real privacy choice. Here&apos;s exactly what it does, and how to
-          dial it down.
+          Whoopsie watches your AI app for failures. To do that, our SDK sends
+          us a record of each model call. We strip common PII before it leaves
+          your machine, strip it again on our server, and delete everything
+          after 7 days. That&apos;s the short version.
         </p>
       </section>
 
       <section className="space-y-10 border-t border-line py-10">
-        <Block heading="What whoopsie stores by default">
-          <p>For every call to{" "}
-            <code className={GeistMono.className}>streamText</code>{" "}
-            or{" "}
-            <code className={GeistMono.className}>generateText</code>:
-          </p>
-          <ul className="ml-5 mt-3 list-disc space-y-1 text-sm text-ink-soft">
-            <li>The model name (e.g. <code>gpt-4o</code>).</li>
-            <li>The prompt and completion text, with PII redacted (see below).</li>
-            <li>Tool call names + arguments (with PII redacted).</li>
-            <li>Input + output token counts and provider-reported cost, if available.</li>
-            <li>Finish reason, duration, and error info.</li>
-            <li>An anonymous project ID you control.</li>
-          </ul>
-          <p className="mt-3">
-            That&apos;s it. We don&apos;t see your API keys, your environment,
-            your file system, your customers, your database, or anything else
-            in the request that isn&apos;t the model call itself.
-          </p>
-        </Block>
-
-        <Block heading="What gets redacted before it leaves your machine">
+        <Block heading="What we collect">
           <p>
-            The SDK runs a regex pack on prompts, completions, and tool args
-            before any HTTP. Default mode (
-            <code className={GeistMono.className}>standard</code>) replaces:
+            For each AI request the SDK is wrapped around: your prompt, the
+            model&apos;s response, tool calls (name, arguments, result), and
+            metadata like model name, token counts, cost, finish reason, and
+            timing. Your project ID travels with each event so the dashboard
+            knows where to display it.
           </p>
-          <ul className="ml-5 mt-3 list-disc space-y-1 text-sm text-ink-soft">
-            <li>Email addresses → <code>[email]</code></li>
-            <li>Phone numbers → <code>[phone]</code></li>
-            <li>Credit-card-shaped numbers → <code>[card]</code></li>
-            <li>JWTs → <code>[jwt]</code></li>
-            <li>OpenAI/Anthropic/AWS/GitHub/Slack-shaped API keys → <code>[openai-key]</code> etc.</li>
-          </ul>
           <p className="mt-3">
-            Redaction happens in the client SDK, before the network call.
-            Whoopsie servers never see the raw values for these patterns. The
-            regex source lives at{" "}
+            Common PII patterns — emails, phone numbers, SSNs, credit-card
+            numbers, JWTs, and OpenAI/Anthropic/AWS/GitHub/Slack-shaped API
+            keys — are replaced with placeholders before the SDK sends
+            anything. The full pattern list is in{" "}
             <a
               href="https://github.com/tn-pisama/whoopsie/blob/main/packages/sdk/src/redact.ts"
               className="underline decoration-coral underline-offset-2"
             >
               packages/sdk/src/redact.ts
             </a>
-            .
+            . If your prompts can contain anything you wouldn&apos;t want us
+            to see, use{" "}
+            <code className={GeistMono.className}>redact: &quot;metadata-only&quot;</code>{" "}
+            in the SDK options — token counts and detector verdicts only, zero
+            text.
+          </p>
+          <p className="mt-3">
+            If you opt in to the contact-email field on{" "}
+            <a href="/install" className="underline decoration-coral underline-offset-2">/install</a>
+            , we keep the email so we can reach you about your project. That&apos;s
+            the only piece of personal data we intentionally retain.
           </p>
         </Block>
 
-        <Block heading="Send nothing but metadata">
+        <Block heading="Where it goes">
           <p>
-            If you&apos;re building anything where the prompt or completion is
-            sensitive — health, legal, internal docs, customer messages — use
-            metadata-only mode. Whoopsie still detects loops, cost spikes, and
-            tool patterns, just without the text.
-          </p>
-          <pre className={`${GeistMono.className} mt-4 overflow-x-auto rounded-md border border-line bg-white p-4 text-[12.5px] leading-6 text-ink-soft`}>
-{`import { wrapLanguageModel } from "ai";
-import { whoopsieMiddleware } from "@whoopsie/sdk";
-
-const model = wrapLanguageModel({
-  model: openai("gpt-4o"),
-  middleware: whoopsieMiddleware({ redact: "metadata-only" }),
-});`}
-          </pre>
-          <p className="mt-3">
-            In this mode the SDK ships token counts, finish reasons, tool
-            names, and detector verdicts. Zero prompt text. Zero completion
-            text. Zero tool arguments.
+            Trace events are stored in a single Neon Postgres database (us-east-1),
+            provisioned through Vercel&apos;s Marketplace integration. The
+            dashboard runs on Vercel Functions in the same region. No
+            third-party analytics, no tag manager.
           </p>
           <p className="mt-3">
-            Other modes:{" "}
-            <code className={GeistMono.className}>aggressive</code> (extends
-            standard with names, IPs, URLs, SSN-shaped numbers),{" "}
-            <code className={GeistMono.className}>off</code> (no redaction
-            — only sensible if you&apos;ve already vetted the inputs upstream).
+            Even if a request reaches our server with PII somehow still
+            attached — for example, a custom client that bypasses the SDK —
+            the ingest endpoint runs the same redaction patterns again before
+            anything is written to Postgres. We treat the SDK as a
+            convenience, not a trust boundary.
+          </p>
+          <p className="mt-3">
+            Your project ID is the only auth on the ingest API in v0. It&apos;s
+            not a secret in the cryptographic sense, but anyone who knows it
+            can post events tagged as your project. Treat it like a
+            low-sensitivity credential — don&apos;t paste it into public chat
+            or commit it to a public repo.
+          </p>
+          <p className="mt-3">
+            Trace events are deleted 7 days after we receive them. The cleanup
+            is a daily cron job; there&apos;s no UI to extend retention and no
+            paid tier where it gets longer.
           </p>
         </Block>
 
-        <Block heading="Retention">
+        <Block heading="Delete or contact">
           <p>
-            Trace events are deleted automatically 7 days after they&apos;re
-            received. The cleanup runs daily at 5:00 UTC via a Vercel cron
-            against{" "}
-            <code className={GeistMono.className}>/api/internal/cleanup</code>.
-            There&apos;s no UI to extend retention. There&apos;s no billing
-            tier where retention gets longer. If you want longer history, run
-            the dashboard yourself — the SDK and detectors are MIT-licensed.
-          </p>
-          <p className="mt-3">
-            Contact emails (if you opt in to the email-capture form) are
-            retained until you ask us to delete them. Email{" "}
+            Email{" "}
             <a
               href="mailto:hi@whoopsie.dev"
               className="underline decoration-coral underline-offset-2"
             >
               hi@whoopsie.dev
             </a>{" "}
-            and we&apos;ll remove them.
-          </p>
-        </Block>
-
-        <Block heading="TOS acceptance log">
-          <p>
-            When you check &ldquo;I agree&rdquo; on{" "}
-            <a
-              href="/install"
-              className="underline decoration-coral underline-offset-2"
-            >
-              /install
-            </a>{" "}
-            we record a single row to{" "}
-            <code className={GeistMono.className}>whoopsie_tos_acceptances</code>{" "}
-            with: timestamp, your IP, your user-agent string, the project ID
-            you were viewing (if any), and a version string identifying which
-            text of the terms you saw. This is the audit trail for{" "}
-            <a
-              href="/terms"
-              className="underline decoration-coral underline-offset-2"
-            >
-              /terms
-            </a>
-            ; without it we couldn&apos;t prove what you agreed to.
-          </p>
-          <p className="mt-3">
-            Acceptance rows are kept for the lifetime of the project. Email{" "}
-            <a
-              href="mailto:hi@whoopsie.dev"
-              className="underline decoration-coral underline-offset-2"
-            >
-              hi@whoopsie.dev
-            </a>{" "}
-            with your IP or project ID and we&apos;ll delete your row.
-          </p>
-        </Block>
-
-        <Block heading="Where it lives">
-          <p>
-            Trace events are stored in a single Neon Postgres database in the
-            US East 1 (<code>iad1</code>) region. The database is provisioned
-            via Vercel&apos;s Neon Marketplace integration. Connection strings
-            are encrypted in Vercel&apos;s env-var store; the database is not
-            publicly reachable.
-          </p>
-          <p className="mt-3">
-            The dashboard is a Next.js app on Vercel Functions, region{" "}
-            <code>iad1</code>. No analytics, no third-party trackers, no
-            tag manager.
-          </p>
-        </Block>
-
-        <Block heading="Who's behind this">
-          <p>
-            Whoopsie is built by{" "}
-            <a
-              href="https://x.com/tnikulainen"
-              className="underline decoration-coral underline-offset-2"
-            >
-              Tuomo Nikulainen
-            </a>{" "}
-            as the vibe-coder cut of{" "}
-            <a
-              href="https://pisama.ai"
-              className="underline decoration-coral underline-offset-2"
-            >
-              Pisama
-            </a>
-            , a multi-agent failure detection platform with the same
-            maintainer. Pisama is the entity behind both products; the same
-            data handling and security posture apply.
-          </p>
-          <p className="mt-3">
-            For security disclosures see{" "}
-            <a
-              href="https://github.com/tn-pisama/whoopsie/blob/main/SECURITY.md"
-              className="underline decoration-coral underline-offset-2"
-            >
-              SECURITY.md
-            </a>{" "}
-            (mail{" "}
+            with your project ID and we&apos;ll delete your traces, your
+            contact email, and your terms-acceptance row. Security reports go
+            to{" "}
             <a
               href="mailto:security@whoopsie.dev"
               className="underline decoration-coral underline-offset-2"
             >
               security@whoopsie.dev
             </a>
-            , backup{" "}
+            ; see{" "}
             <a
-              href="mailto:tuomo@pisama.ai"
+              href="https://github.com/tn-pisama/whoopsie/blob/main/SECURITY.md"
               className="underline decoration-coral underline-offset-2"
             >
-              tuomo@pisama.ai
-            </a>
-            ). For data deletion or general questions:{" "}
-            <a
-              href="mailto:hi@whoopsie.dev"
-              className="underline decoration-coral underline-offset-2"
-            >
-              hi@whoopsie.dev
+              SECURITY.md
             </a>
             .
-          </p>
-          <p className="mt-3">
-            If you&apos;re security-sensitive: this is a new project. The
-            packages were first published on 2026-05-01. Download counts will
-            be low for a while. Treat it accordingly — try metadata-only mode
-            first, run on a side project before production, and read the
-            source.
-          </p>
-        </Block>
-
-        <Block heading="Local-only mode (planned)">
-          <p>
-            <code className={GeistMono.className}>WHOOPSIE_LOCAL=1</code> will
-            run an offline dashboard against a local SQLite store, with
-            nothing leaving your laptop. Tracking issue:{" "}
-            <a
-              href="https://github.com/tn-pisama/whoopsie/issues"
-              className="underline decoration-coral underline-offset-2"
-            >
-              file one
-            </a>{" "}
-            if you want it sooner.
           </p>
         </Block>
       </section>
 
       <footer className="border-t border-line py-12 font-mono text-xs text-ink-muted">
-        <p>Last updated: 2026-05-01.</p>
+        <p>Last updated: {LAST_UPDATED}.</p>
         <p className="mt-2">
           <a href="/" className="hover:text-ink">← back to whoopsie</a>
         </p>

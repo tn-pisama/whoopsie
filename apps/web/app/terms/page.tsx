@@ -89,22 +89,13 @@ export default function TermsPage() {
 
         <Block heading="4. Your data">
           <p>
-            What we store, what we don&apos;t, what gets redacted, and how
-            long we keep it is documented at{" "}
+            What we collect, where it goes, and how to delete it is documented
+            at{" "}
             <a
               href="/privacy"
               className="underline decoration-coral/40 underline-offset-2 hover:text-coral"
             >
               /privacy
-            </a>
-            . Trace events are deleted automatically 7 days after we receive
-            them. Contact emails (if you opted in) are retained until you ask
-            us to delete them — email{" "}
-            <a
-              href="mailto:hi@whoopsie.dev"
-              className="underline decoration-coral/40 underline-offset-2 hover:text-coral"
-            >
-              hi@whoopsie.dev
             </a>
             .
           </p>

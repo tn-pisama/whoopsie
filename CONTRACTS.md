@@ -61,10 +61,17 @@ Detectors run synchronously inside the POST /api/v1/spans handler. If a detector
 
 Detectors consume `AgentTrace` (in `packages/detectors/src/types.ts`). The ingest builds an `AgentTrace` from each `TraceEvent` by mapping `toolCalls` 1:1 and copying `prompt`/`completion`/tokens.
 
-## Storage (v0)
+## Storage
 
-In-memory only. `Map<projectId, RingBuffer<TraceWithHits>>` plus a Node `EventEmitter` per project. Rebuilds on server restart. Production move: Neon Postgres + LISTEN/NOTIFY (see plan).
+Postgres (Neon, us-east-1) via the Vercel Marketplace integration. Connection string lives in `DATABASE_URL`.
 
-## Auth (v0)
+- Table `whoopsie_traces (id bigserial, project_id text, payload jsonb, created_at timestamptz)` with index on `(project_id, id desc)`.
+- LISTEN/NOTIFY on channel `whoopsie_traces` drives the SSE bus.
+- 7-day TTL via daily Vercel Cron at `/api/internal/cleanup`.
+- Defense-in-depth: every event is re-redacted on the server before INSERT (see `apps/web/app/api/v1/spans/route.ts:scrubEvent`), so direct callers bypassing the SDK can't poison the store.
 
-None. `WHOOPSIE_PROJECT_ID` is the entire identity. Anyone with the ID can read the project's stream. Acceptable for local dev and HN-launch trust posture; magic-link comes in v0.2.
+`apps/web/lib/store.ts` also ships an in-memory implementation as the dev-only fallback when `DATABASE_URL` is unset.
+
+## Auth
+
+None. `WHOOPSIE_PROJECT_ID` is the entire identity — anyone who knows it can post events and read the project's stream. Acceptable for v0; rate limits are per-IP and per-project. Authenticated tier is on the roadmap.
