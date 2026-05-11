@@ -14,11 +14,27 @@ export interface PlatformPrompt {
   whereToPaste: string;
   /** Where the env var lives on this platform. */
   envVarLocation: string;
+  /**
+   * Optional framework hint inserted into the prompt. Used when a platform
+   * runs a non-Next.js framework (Lovable → TanStack Start, etc.) so the AI
+   * knows the file conventions ahead of time instead of guessing.
+   */
+  frameworkNote?: string;
+  /**
+   * If true, this platform hasn't been verified end-to-end with the current
+   * SDK/CLI/prompts. Surface a visible "untested" badge on the install page
+   * so users aren't surprised when it doesn't work cleanly.
+   */
+  untested?: boolean;
   template: (projectId: string) => string;
 }
 
-const baseInstructions = (projectId: string, envVarLocation: string) =>
-  `I'd like to add lightweight observability to a side-project AI app I'm working on. Heads-up before you start: the package is brand-new and low-adoption — first published 2026-05-01 — so this is for a non-critical project, not anything in production. If my code doesn't actually have an AI SDK call to instrument yet, please tell me and skip the install.
+const baseInstructions = (
+  projectId: string,
+  envVarLocation: string,
+  frameworkNote?: string,
+) =>
+  `I'd like to add lightweight observability to a side-project AI app I'm working on. Heads-up before you start: the package is brand-new and low-adoption — first published 2026-05-01 — so this is for a non-critical project, not anything in production. If my code doesn't actually have an AI SDK call to instrument yet, please tell me and skip the install.${frameworkNote ? `\n\n${frameworkNote}` : ""}
 
 The package is @whoopsie/sdk. It's a Vercel AI SDK middleware that streams trace metadata about my agent's calls to a dashboard so I can see when the agent loops, hallucinates, or burns through tokens. Public refs:
 
@@ -54,6 +70,9 @@ To verify the install is wired correctly (independent of whether your AI call ac
 
 If you'd rather wait until the package has more adoption, suggest a more established alternative (Langfuse, Helicone, Sentry AI, OpenTelemetry) and I'll consider it.`;
 
+const LOVABLE_FRAMEWORK_NOTE =
+  "Important framework note: this project runs on **TanStack Start (React 19 + Vite)**, not Next.js. The streamText / generateText call is in a TanStack server file route (typically `src/routes/api/chat.ts` or similar), not `app/api/chat/route.ts`. Find the actual file by searching the repo for `streamText` or `generateText` — that's where the wrap goes. The @whoopsie/sdk `observe()` helper works identically on TanStack Start since it operates on the Vercel AI SDK's model object, which is framework-agnostic.";
+
 export const platforms: PlatformPrompt[] = [
   {
     slug: "lovable",
@@ -62,10 +81,12 @@ export const platforms: PlatformPrompt[] = [
       "Open your Lovable project, click the chat with the AI, paste the prompt below.",
     whereToPaste: "the chat with the Lovable AI",
     envVarLocation: "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)",
+    frameworkNote: LOVABLE_FRAMEWORK_NOTE,
     template: (id) =>
       baseInstructions(
         id,
         "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)",
+        LOVABLE_FRAMEWORK_NOTE,
       ),
   },
   {
@@ -88,6 +109,12 @@ export const platforms: PlatformPrompt[] = [
       "In your Bolt project, paste the prompt below into the chat with bolt.new's AI.",
     whereToPaste: "the bolt.new chat",
     envVarLocation: "the .env file at the project root",
+    // Marked untested: the cross-platform integration test on 2026-05-10
+    // ran out of Bolt free-tier tokens before reaching the trace-landing
+    // step. Untested means we don't know if the AI accepts the prompt
+    // cleanly or whether Bolt's WebContainer can reach whoopsie.dev/api/v1.
+    // Re-enable once verified end-to-end.
+    untested: true,
     template: (id) => baseInstructions(id, "the .env file at the project root"),
   },
   {

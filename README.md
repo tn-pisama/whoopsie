@@ -94,6 +94,10 @@ observe(model, { redact: "metadata-only" });
 
 Hosted ingest has a 7-day rolling delete and no retention upsell.
 
+## Cross-platform install testing
+
+Manual test rhythm for verifying that AI builders (v0, Lovable, Replit, Cursor) keep producing working installs as their underlying AI behavior drifts. Run before every SDK release. See [docs/PLATFORM_TESTING.md](./docs/PLATFORM_TESTING.md).
+
 ## Repo layout
 
 ```

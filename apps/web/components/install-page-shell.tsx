@@ -10,6 +10,7 @@ interface PlatformPrompt {
   name: string;
   blurb: string;
   prompt: string;
+  untested?: boolean;
 }
 
 const STORAGE_KEY = "whoopsie:project-id";

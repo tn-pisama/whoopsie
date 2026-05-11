@@ -29,6 +29,7 @@ export default async function InstallPage({
     name: p.name,
     blurb: p.blurb,
     prompt: p.template(serverProjectId),
+    untested: p.untested,
   }));
 
   return (

@@ -11,6 +11,7 @@ interface PlatformView {
   name: string;
   blurb: string;
   prompt: string;
+  untested?: boolean;
 }
 
 export function InstallTabs({
@@ -41,18 +42,48 @@ export function InstallTabs({
             aria-selected={active === p.slug}
             onClick={() => setActive(p.slug)}
             className={
-              "px-4 py-2 -mb-px border-b-2 text-sm font-medium transition " +
+              "px-4 py-2 -mb-px border-b-2 text-sm font-medium transition flex items-center gap-2 " +
               (active === p.slug
                 ? "border-coral text-ink"
                 : "border-transparent text-ink-muted hover:text-ink")
             }
           >
             {p.name}
+            {p.untested && (
+              <span
+                className="rounded bg-ink-muted/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-muted"
+                title="Not verified end-to-end with the current SDK/CLI/prompts. Use with caution."
+              >
+                untested
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       <p className="mt-6 text-ink-muted">{platform.blurb}</p>
+
+      {platform.untested && (
+        <div className="mt-4 rounded-md border border-ink-muted/30 bg-ink-muted/5 p-4 text-sm text-ink-soft">
+          <p>
+            <strong className="font-medium text-ink">Untested.</strong> The
+            cross-platform integration test didn&apos;t finish on {platform.name}{" "}
+            within free-tier limits, so this prompt isn&apos;t verified
+            end-to-end yet. The wrap pattern itself is solid — your bigger risk
+            is whether {platform.name}&apos;s runtime can reach{" "}
+            <code className="font-mono">whoopsie.dev/api/v1/spans</code>. After
+            install, run <code className="font-mono">npx @whoopsie/cli verify</code>{" "}
+            and check the dashboard. If you hit issues, please{" "}
+            <a
+              href="https://github.com/tn-pisama/whoopsie/issues"
+              className="underline decoration-coral underline-offset-2"
+            >
+              file one
+            </a>
+            .
+          </p>
+        </div>
+      )}
 
       <div className="mt-6">
         <TermsGate projectId={projectId}>
