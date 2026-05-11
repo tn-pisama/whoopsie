@@ -2,13 +2,14 @@
 import { Command } from "commander";
 import { init } from "./init.js";
 import { startMcpServer } from "./mcp.js";
+import { verify } from "./verify.js";
 
 const program = new Command();
 
 program
   .name("whoopsie")
   .description("See your AI app's failures live. https://whoopsie.dev")
-  .version("0.0.1");
+  .version("0.1.0");
 
 program
   .command("init")
@@ -47,6 +48,41 @@ program
     }
     await startMcpServer({ projectId, baseUrl: opts.baseUrl });
   });
+
+program
+  .command("verify")
+  .description(
+    "POST a synthetic trace and confirm it round-trips through the dashboard. Use after install to prove integration works.",
+  )
+  .option("--cwd <path>", "Project root for reading .env.local", process.cwd())
+  .option(
+    "-p, --project-id <id>",
+    "Override project id (defaults to WHOOPSIE_PROJECT_ID or .env.local)",
+  )
+  .option(
+    "--base-url <url>",
+    "Override the whoopsie base URL (default https://whoopsie.dev)",
+  )
+  .option(
+    "--timeout-ms <ms>",
+    "How long to wait for the trace to surface (default 15000)",
+    (v) => Number(v),
+  )
+  .action(
+    async (opts: {
+      cwd: string;
+      projectId?: string;
+      baseUrl?: string;
+      timeoutMs?: number;
+    }) => {
+      await verify({
+        cwd: opts.cwd,
+        projectId: opts.projectId,
+        baseUrl: opts.baseUrl,
+        timeoutMs: opts.timeoutMs,
+      });
+    },
+  );
 
 program.parseAsync(process.argv).catch((err) => {
   console.error(err);

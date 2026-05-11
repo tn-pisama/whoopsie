@@ -1,6 +1,6 @@
 ## @whoopsie/cli
 
-Two subcommands.
+Three subcommands.
 
 ### `whoopsie init`
 
@@ -22,6 +22,25 @@ Flags:
 - `--cwd <path>` — project root (default: cwd)
 - `--no-open` — skip browser open
 - `--dry-run` — print planned changes, don't write
+
+### `whoopsie verify`
+
+```bash
+npx @whoopsie/cli verify
+```
+
+POSTs a synthetic trace to whoopsie's ingest API and waits for it to surface on `/live/<projectId>`. Use this after install to prove the round-trip works — independent of whether your AI builder wired the middleware correctly. If `verify` succeeds and your real chat still produces zero traces, the gap is in your application code (model not wrapped, wrap in a file that isn't imported, etc.).
+
+Project ID resolution order: `--project-id` flag → `WHOOPSIE_PROJECT_ID` env → `.env.local` in `--cwd`.
+
+Flags:
+
+- `--cwd <path>` — project root for reading `.env.local` (default: cwd)
+- `-p, --project-id <id>` — override the resolved project id
+- `--base-url <url>` — point at a self-hosted whoopsie (default `https://whoopsie.dev`)
+- `--timeout-ms <ms>` — how long to wait for the trace to surface (default 15000)
+
+Exit code is 0 on success, 1 on any failure (no project id, ingest 5xx, network error, or trace didn't land within the timeout).
 
 ### `whoopsie mcp`
 

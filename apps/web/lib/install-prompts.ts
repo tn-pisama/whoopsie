@@ -48,7 +48,9 @@ Could you:
 2. If there is one: add \`@whoopsie/sdk\` as a dependency and replace the existing model expression with \`observe(<existing>, { redact: "metadata-only" })\`. Keep the underlying model; only wrap it.
 3. Tell me which file you changed and the exact line you changed.
 
-I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}. After install, send one chat message in the running app — a trace should appear at that dashboard within ~2 seconds. If it doesn't, the wrap was applied incorrectly; revisit step 2.
+I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}.
+
+To verify the install is wired correctly (independent of whether your AI call actually fires yet), tell me to run \`npx @whoopsie/cli verify\` in a terminal. It posts a synthetic trace and confirms the round-trip — if it passes but real chats don't produce traces, the gap is in the code wrap. If it fails, the gap is in env vars or network egress. Either way it tells me where to look.
 
 If you'd rather wait until the package has more adoption, suggest a more established alternative (Langfuse, Helicone, Sentry AI, OpenTelemetry) and I'll consider it.`;
 

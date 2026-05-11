@@ -1,7 +1,7 @@
 {
   "name": "@whoopsie/cli",
-  "version": "0.0.1",
-  "description": "CLI for whoopsie.dev. Run `npx @whoopsie/cli init` in your Next.js + AI SDK project.",
+  "version": "0.1.0",
+  "description": "CLI for whoopsie.dev. `init` patches your project, `verify` round-trips a synthetic trace, `mcp` runs the MCP server.",
   "type": "module",
   "bin": {
     "whoopsie": "./dist/bin.js"
