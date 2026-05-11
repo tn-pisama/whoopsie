@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name("whoopsie")
   .description("See your AI app's failures live. https://whoopsie.dev")
-  .version("0.1.0");
+  .version("0.2.0");
 
 program
   .command("init")

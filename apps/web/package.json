@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test 'test/**/*.test.ts'"
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "ai-v6",

@@ -80,28 +80,14 @@ function alreadyPatched(file: SourceFile): boolean {
 }
 
 function addImports(file: SourceFile): void {
-  const hasWrap = file.getImportDeclarations().some((d) => {
-    if (d.getModuleSpecifierValue() !== "ai") return false;
-    return d.getNamedImports().some((n) => n.getName() === "wrapLanguageModel");
-  });
-
-  if (!hasWrap) {
-    const aiImport = file
-      .getImportDeclarations()
-      .find((d) => d.getModuleSpecifierValue() === "ai");
-    if (aiImport) {
-      aiImport.addNamedImport("wrapLanguageModel");
-    } else {
-      file.addImportDeclaration({
-        moduleSpecifier: "ai",
-        namedImports: ["wrapLanguageModel"],
-      });
-    }
-  }
-
+  // Use the observe() helper instead of the wrapLanguageModel + whoopsieMiddleware
+  // two-step pattern. observe() is the canonical install path (see install
+  // prompt, SDK README); shipping the two-step from the CLI when the install
+  // page tells users to use observe() is the kind of cross-surface drift the
+  // audit caught.
   file.addImportDeclaration({
     moduleSpecifier: "@whoopsie/sdk",
-    namedImports: ["whoopsieMiddleware"],
+    namedImports: ["observe"],
   });
 }
 
@@ -110,6 +96,6 @@ function wrapModelArg(_call: CallExpression, modelProp: ObjectLiteralElementLike
   if (!initializer) return;
   const original = initializer.getText();
   initializer.replaceWithText(
-    `wrapLanguageModel({ model: ${original}, middleware: whoopsieMiddleware() })`,
+    `observe(${original}, { redact: "metadata-only" })`,
   );
 }

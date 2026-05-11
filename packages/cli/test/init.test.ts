@@ -67,10 +67,14 @@ test("init writes WHOOPSIE_PROJECT_ID and patches the streamText call", async ()
     assert.match(env, /^WHOOPSIE_PROJECT_ID=ws_[A-Za-z0-9_-]+/m);
 
     const route = await readFile(join(root, "app", "api", "chat", "route.ts"), "utf8");
-    assert.match(route, /from "@whoopsie\/sdk"/);
-    assert.match(route, /whoopsieMiddleware/);
-    assert.match(route, /wrapLanguageModel/);
-    assert.match(route, /wrapLanguageModel\(\{ model: openai\("gpt-4o"\), middleware: whoopsieMiddleware\(\) \}\)/);
+    // CLI 0.2.0+ emits the observe() helper from @whoopsie/sdk, not the
+    // two-step wrapLanguageModel + whoopsieMiddleware pattern. This matches
+    // what the install page tells users to write.
+    assert.match(route, /import \{ observe \} from "@whoopsie\/sdk"/);
+    assert.match(route, /observe\(openai\("gpt-4o"\), \{ redact: "metadata-only" \}\)/);
+    // And the patcher should NOT introduce the old pattern.
+    assert.doesNotMatch(route, /wrapLanguageModel/);
+    assert.doesNotMatch(route, /whoopsieMiddleware/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -115,9 +119,9 @@ test("init second run is idempotent (does not double-wrap)", async () => {
     }
 
     const route = await readFile(join(root, "app", "api", "chat", "route.ts"), "utf8");
-    // Count wrapLanguageModel CALL sites (not the import). One call expected — no double-wrap.
-    const callSites = (route.match(/wrapLanguageModel\s*\(/g) ?? []).length;
-    assert.equal(callSites, 1, `expected exactly one wrapLanguageModel call, got ${callSites}\n${route}`);
+    // Count observe() CALL sites (not the import). One call expected — no double-wrap.
+    const callSites = (route.match(/observe\s*\(/g) ?? []).length;
+    assert.equal(callSites, 1, `expected exactly one observe call, got ${callSites}\n${route}`);
     // And just one whoopsie import declaration.
     const imports = (route.match(/from "@whoopsie\/sdk"/g) ?? []).length;
     assert.equal(imports, 1);

@@ -89,7 +89,42 @@ export function whoopsieMiddleware(
   opts: WhoopsieMiddlewareOptions = {},
 ): LanguageModelV3Middleware {
   const inner: WhoopsieLanguageModelMiddleware = buildMiddleware(opts);
-  return inner as unknown as LanguageModelV3Middleware;
+  // Misuse guardrail: a common AI-agent mistake is to call the returned
+  // middleware as if it were a model wrapper — `whoopsieMiddleware(opts)(model)`.
+  // (The v0 install on 2026-05-10 did exactly this.) Without this guardrail,
+  // Node throws the cryptic "X is not a function" at chat time, with no
+  // pointer to the actual fix.
+  //
+  // The Proxy `apply` trap only fires when the underlying target is callable,
+  // so the target is a no-op function. `get` forwards every property access
+  // to the inner middleware object so wrapLanguageModel reads `wrapGenerate` /
+  // `wrapStream` normally. `has` lets `'wrapGenerate' in middleware` checks
+  // still work.
+  const callable = function (): never {
+    /* unreachable; the apply trap handles it */ throw new Error("unreachable");
+  };
+  return new Proxy(callable, {
+    apply(): never {
+      throw new TypeError(
+        "[whoopsie] Don't call whoopsieMiddleware(opts) as a function. " +
+          "Use observe(model, opts) from @whoopsie/sdk instead — single " +
+          "call, no wrapLanguageModel ceremony. " +
+          "See https://whoopsie.dev/install",
+      );
+    },
+    get(_t, key): unknown {
+      return inner[key as keyof WhoopsieLanguageModelMiddleware];
+    },
+    has(_t, key): boolean {
+      return key in inner;
+    },
+    ownKeys() {
+      return Reflect.ownKeys(inner);
+    },
+    getOwnPropertyDescriptor(_t, key) {
+      return Reflect.getOwnPropertyDescriptor(inner, key);
+    },
+  }) as unknown as LanguageModelV3Middleware;
 }
 
 function buildMiddleware(

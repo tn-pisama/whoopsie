@@ -1,6 +1,6 @@
 {
   "name": "@whoopsie/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for whoopsie.dev. `init` patches your project, `verify` round-trips a synthetic trace, `mcp` runs the MCP server.",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test 'test/**/*.test.ts'"
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

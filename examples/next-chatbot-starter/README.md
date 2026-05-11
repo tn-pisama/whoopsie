@@ -10,8 +10,7 @@ without writing any observability code yourself.
 ## What's in here
 
 - `app/api/chat/route.ts` — streams `gpt-4o-mini` via the Vercel AI SDK,
-  wrapped in `whoopsieMiddleware()` so every call's metadata flows to your
-  dashboard.
+  wrapped in `observe()` so every call's metadata flows to your dashboard.
 - `app/page.tsx` — minimal client-side chat UI. Streams tokens as they
   arrive.
 - `.env.example` — three variables. OpenAI key, your whoopsie project id,
@@ -52,7 +51,7 @@ your app. If your prompts contain anything you'd rather not have in
 whoopsie's database, swap to metadata-only:
 
 ```ts
-middleware: whoopsieMiddleware({ redact: "metadata-only" })
+observe(openai("gpt-4o-mini"), { redact: "metadata-only" })
 ```
 
 That ships only token counts, finish reasons, tool names, and detector

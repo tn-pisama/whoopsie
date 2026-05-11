@@ -36,13 +36,12 @@ export async function init(opts: InitOptions): Promise<void> {
   step("Patching the first streamText / generateText call site...");
   const patched = await patchStreamTextCallSite(root, opts.dryRun);
   if (patched) {
-    ok(`Wrapped model in ${kleur.bold(patched)} with whoopsieMiddleware().`);
+    ok(`Wrapped model in ${kleur.bold(patched)} with observe().`);
   } else {
     warn("No streamText/generateText call site found. Add the wrapper manually:");
-    console.log(kleur.dim("\n  import { wrapLanguageModel } from 'ai';"));
-    console.log(kleur.dim("  import { whoopsieMiddleware } from '@whoopsie/sdk';"));
+    console.log(kleur.dim("\n  import { observe } from '@whoopsie/sdk';"));
     console.log(
-      kleur.dim("  const model = wrapLanguageModel({ model: yourModel, middleware: whoopsieMiddleware() });\n"),
+      kleur.dim("  const model = observe(yourModel, { redact: 'metadata-only' });\n"),
     );
   }
 

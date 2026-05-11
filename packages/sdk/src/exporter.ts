@@ -59,6 +59,8 @@ export class TraceExporter {
       return;
     }
     const batch = this.buffer.splice(0, this.buffer.length);
+    const silent =
+      typeof process !== "undefined" && process.env.WHOOPSIE_SILENT === "1";
     const debug =
       typeof process !== "undefined" && process.env.WHOOPSIE_DEBUG === "1";
     try {
@@ -75,6 +77,42 @@ export class TraceExporter {
         console.log(
           `[whoopsie] flushed ${batch.length} event(s) → HTTP ${res.status}`,
         );
+      }
+      // The ingest API returns 207 Multi-Status when only some events in the
+      // batch were persisted (e.g. some were malformed, or persist_failed
+      // mid-batch). Always surface this — silent partial drop is exactly the
+      // failure mode we're trying not to ship. In debug mode, log each
+      // failed event's reason.
+      if (res.status === 207 && !silent) {
+        try {
+          const body = (await res
+            .clone()
+            .json()
+            .catch(() => null)) as {
+            accepted?: number;
+            submitted?: number;
+            failed?: Array<{ traceId: string; reason: string }>;
+          } | null;
+          const failed = body?.failed ?? [];
+          const accepted = body?.accepted ?? "?";
+          const submitted = body?.submitted ?? batch.length;
+          console.warn(
+            `[whoopsie] partial flush: ${accepted}/${submitted} accepted, ${failed.length} dropped`,
+          );
+          if (debug) {
+            for (const f of failed) {
+              console.warn(
+                `[whoopsie]   - traceId=${f.traceId} reason=${f.reason}`,
+              );
+            }
+          }
+        } catch {
+          if (debug) {
+            console.warn(
+              `[whoopsie] partial flush (HTTP 207) but response body could not be parsed`,
+            );
+          }
+        }
       }
     } catch (err) {
       // Silent in production: telemetry must never break the host app. Debug
