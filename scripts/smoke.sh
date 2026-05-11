@@ -88,4 +88,4 @@ curl -s -X POST "$BASE/api/v1/spans" \
 
 echo ""
 echo "=== 6. SSE handshake (read first 2 events) ==="
-timeout 3 curl -s -N "$BASE/api/sse/$PROJ" | head -40 || true
+curl -s -N --max-time 3 "$BASE/api/sse/$PROJ" | head -40 || true
