@@ -20,7 +20,7 @@ itself up."*
 
 **Title (80 chars max)**
 
-`Show HN: Whoopsie – live failure detection for Vercel AI SDK apps (free)`
+`Show HN: Whoopsie – live failure detection for Vercel AI SDK apps`
 
 (70 chars; HN cuts at ~80. Alternates if the first feels off:)
 
@@ -57,7 +57,7 @@ there's no streamText call to wrap.
 It's pre-alpha and I'm a single maintainer; I documented the data
 handling at /privacy plainly (default-on PII redaction, metadata-only
 mode that ships zero prompt text, 7-day hard delete, Neon Postgres in
-iad1). MIT, free forever for the hosted dashboard, monetization is via
+iad1). MIT, no charge for the hosted dashboard, monetization is via
 the enterprise sibling (pisama.ai).
 
 Roast away. Especially curious whether anyone has thoughts on the
@@ -110,7 +110,6 @@ launched whoopsie.dev today
 it catches when your AI app loops, hallucinates, or burns through tokens
 
 one wrap on your Vercel AI SDK call. seven detectors. live dashboard.
-free forever.
 
 most fun part: paste a prompt into Lovable or Cursor and your AI builder
 wires it up for you. no terminal needed.
@@ -165,7 +164,7 @@ pre-alpha. single maintainer. side projects only.
 **Tweet 5 (CTA)**
 
 ```
-free forever for the hosted dashboard. monetization is the enterprise
+no charge for the hosted dashboard. monetization is the enterprise
 sibling at pisama.ai (50-detector multi-agent platform), not whoopsie.
 
 mit-licensed sdk, mit detectors. fork it.
@@ -184,7 +183,7 @@ if you ship an AI feature this week, install it. tell me what fires.
 
 ```
 Hey Lee — built a Vercel AI SDK middleware that catches when an agent
-loops, hallucinates, or burns tokens. One wrap, live dashboard, free.
+loops, hallucinates, or burns tokens. One wrap, live dashboard, MIT.
 
 Demo: https://whoopsie.dev/demo (anyone can type a prompt, the trace
 metadata lands in the public dashboard).

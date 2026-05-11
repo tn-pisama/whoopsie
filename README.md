@@ -1,6 +1,6 @@
 # whoopsie
 
-**See your AI app's failures live. Free forever.**
+**See your AI app's failures live.**
 
 `whoopsie` is a Vercel AI SDK middleware that catches loops, hallucinations, cost spikes, and broken completions in your Next.js agent and surfaces them in a live dashboard. No signup wall, no Postgres to run — paste in one line and watch your first agent fail in real time.
 
@@ -123,7 +123,7 @@ scripts/
 
 ## Honest known gaps
 
-1. **Domain `whoopsie.dev` and npm `@whoopsie/*` scope are unregistered.** User-action only — the agent cannot register on your behalf. Walkthrough in [REGISTRATION.md](./REGISTRATION.md). Total cost about $13/year for the domain; npm scope and GitHub org are free.
+1. **Domain `whoopsie.dev` and npm `@whoopsie/*` scope are unregistered.** User-action only — the agent cannot register on your behalf. Walkthrough in [REGISTRATION.md](./REGISTRATION.md). Total cost about $13/year for the domain; npm scope and GitHub org are no charge.
 2. **Hallucination and derailment are still heuristic.** Hardened with stoplists and regression tests, but they will never match an LLM-judge for precision. Honest about this in code comments and detector descriptions.
 3. **No magic-link auth, no multi-tenancy, no rate limiting.** Anyone with a project ID can read its stream. Acceptable for v0 / HN-launch trust posture; magic-link comes in v0.2.
 4. **No Vercel Marketplace listing yet.** That's the wedge per the plan, but it requires the npm scope to be claimed first.

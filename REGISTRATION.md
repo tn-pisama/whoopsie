@@ -10,14 +10,14 @@ Status as of 2026-04-30:
 - ⏳ GitHub `whoopsie-dev` org unclaimed — see step 3 below.
 - ⏳ **Neon Postgres for prod persistence** — see step 4 below. Without this, prod runs on `MemoryStore` and contact emails / traces vanish on cold start.
 
-## 1. Claim the npm scope (free, ~1 minute)
+## 1. Claim the npm scope (no charge, ~1 minute)
 
 ```bash
 npm whoami                    # confirm you're logged in as the right user
-npm org create whoopsie       # creates the @whoopsie scope under the Free org tier
+npm org create whoopsie       # creates the @whoopsie scope under the public-packages org tier
 ```
 
-The Free org tier allows unlimited public packages and zero private packages, which is all `whoopsie` needs.
+The public-packages org tier allows unlimited public packages and zero private packages, which is all `whoopsie` needs.
 
 Verify:
 
@@ -32,7 +32,7 @@ nvm use && pnpm install && pnpm build
 pnpm release   # runs `pnpm -r --filter ./packages/* publish --access public --no-git-checks`
 ```
 
-`--access public` is required the first time scoped packages publish — npm defaults scoped to private which the Free tier disallows.
+`--access public` is required the first time scoped packages publish — npm defaults scoped to private which the public-packages tier disallows.
 
 ### Trusted Publishing (do once, then no NPM_TOKEN secret needed)
 
@@ -62,7 +62,7 @@ In Cloudflare → DNS:
 
 Vercel auto-provisions a Let's Encrypt cert within ~60 seconds.
 
-`.dev` is HSTS-preloaded by Google Registry — every host gets HTTPS for free, no http allowed. Nothing extra to configure.
+`.dev` is HSTS-preloaded by Google Registry — every host gets HTTPS by default, no http allowed. Nothing extra to configure.
 
 ### API-driven setup if you'd rather not click
 
@@ -89,7 +89,7 @@ Don't paste the token into a shell history file. Use `read -s` or scope the toke
 
 ## 3. Claim the GitHub org
 
-`https://github.com/account/organizations/new` → Free plan, name `whoopsie-dev`.
+`https://github.com/account/organizations/new` → public-org plan, name `whoopsie-dev`.
 
 Then push this repo:
 
@@ -109,10 +109,10 @@ grep -r "repository" ~/whoopsie/packages/*/package.json
 
 Why it matters: prod is currently on `MemoryStore`. Every cold start of the Vercel Function loses recent traces and any contact emails captured. Wiring Postgres flips both into persistent storage automatically — `apps/web/lib/store.ts` already reads `WHOOPSIE_DATABASE_URL` and switches to `PostgresStore` (with LISTEN/NOTIFY for cross-instance fan-out).
 
-**Path A — Vercel Marketplace (recommended, free tier):**
+**Path A — Vercel Marketplace (recommended, starter tier):**
 
 1. https://vercel.com/marketplace/neon → Add to Project → pick the `whoopsie` project.
-2. Authorize Neon (one-click if you have a Neon account, signup is free).
+2. Authorize Neon (one-click if you have a Neon account; signup has no charge).
 3. Vercel auto-injects `DATABASE_URL` (and a few others) as env vars.
 4. Add an alias so our code finds it:
    ```bash
@@ -124,7 +124,7 @@ Why it matters: prod is currently on `MemoryStore`. Every cold start of the Verc
 
 **Path B — Neon directly:**
 
-1. https://console.neon.tech → New Project → free tier.
+1. https://console.neon.tech → New Project → starter tier.
 2. Copy the connection string from the Neon dashboard (look for "pooled" connection, with `?sslmode=require`).
 3. `vercel env add WHOOPSIE_DATABASE_URL production` and paste.
 4. Redeploy.
@@ -151,9 +151,9 @@ Without Resend, the dashboard is passive — users have to keep a tab open to se
 
 The code path is already shipped (`apps/web/lib/alerts.ts`, integrated in `/api/v1/spans`). It's gated on `RESEND_API_KEY`. If the env var isn't set, alert sends are a clean no-op — no errors, no test failures.
 
-**Setup (Resend free tier — 3,000 emails/month):**
+**Setup (Resend starter tier — 3,000 emails/month):**
 
-1. https://resend.com/signup → free tier.
+1. https://resend.com/signup → starter tier.
 2. **Add and verify `whoopsie.dev` as a sending domain.** Resend will give you 3 DNS records (TXT for SPF, TXT for DKIM, MX for return path). Add them in Cloudflare → DNS, all proxy off / DNS only. Verification takes 5–60s.
 3. Generate an API key: Resend → API Keys → Create. Scope: full access (or "send-only" if available). Copy the value.
 4. Set the env var on Vercel:
@@ -205,8 +205,8 @@ These don't matter for the product but go fast:
 | Item | One-time | Recurring |
 |---|---|---|
 | `whoopsie.dev` (Cloudflare Registrar) | $12.20 ✅ paid | $12.20/yr |
-| `@whoopsie` npm scope | $0 | $0 (free tier, public only) |
-| `whoopsie-dev` GitHub org | $0 | $0 (free plan) |
+| `@whoopsie` npm scope | $0 | $0 (public-only tier) |
+| `whoopsie-dev` GitHub org | $0 | $0 (public-org plan) |
 | Cloudflare DNS | $0 | $0 |
 | Vercel project | $0 | $0 (Hobby tier sufficient until first paying customer) |
 

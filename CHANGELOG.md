@@ -127,7 +127,7 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 - **SSE polling fallback** — `/live/<id>` now reliably surfaces new traces within ~2s on Vercel's serverless runtime. The pg_notify-based bus alone wasn't reliable across Vercel function instances.
 - **Spans route durability fix** — `accepted` count now reflects only persisted events. Partial-flush failures return HTTP 207 with per-event reasons; full-batch failures return 502.
 - **Install prompt rewrite** — mandates `observe()`, includes "do not" lines blocking the most common AI typos, includes a verify-after-install step, has a TanStack Start framework note for Lovable.
-- **Bolt scope drop** — Bolt tab now shows an "untested" badge with explanation. Cross-platform integration test ran out of free-tier tokens mid-build on Bolt.
+- **Bolt scope drop** — Bolt tab now shows an "untested" badge with explanation. Cross-platform integration test ran out of starter-quota tokens mid-build on Bolt.
 - **Docs**: `docs/PLATFORM_TESTING.md`, `docs/CROSS_PLATFORM_TEST_RUNBOOK.md`, `docs/PLATFORM_REMEDIATION.md`.
 - **Cross-framework SDK integration tests** under `packages/sdk/test/integration/` for Next.js, TanStack Start, Hono, and Express.
 - **Inactive cross-framework CI workflow** at `.github/workflows/cross-framework.yml` — ready to activate by removing the `if: false` guards and adding three GitHub Secrets.

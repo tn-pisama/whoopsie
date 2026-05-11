@@ -2,7 +2,7 @@
   "name": "whoopsie",
   "private": true,
   "version": "0.0.0",
-  "description": "See your AI app's failures live. Free forever.",
+  "description": "See your AI app's failures live.",
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=20"

@@ -53,7 +53,7 @@ Paste it into the platform's chat. Press Enter / Submit.
 The AI will spend 1–10 minutes thinking and writing code. During this:
 - Capture the AI's response verbatim. Especially: did it refuse? Did it use `observe()`? Did it ask for env vars?
 - If the platform asks for `OPENAI_API_KEY` or `WHOOPSIE_PROJECT_ID` in a secrets UI, note this (you've already set these manually before the session).
-- If the platform's free-tier credits run out, capture exactly when and at what step.
+- If the platform's starter-quota credits run out, capture exactly when and at what step.
 
 ### 4. Inspect the generated route file
 

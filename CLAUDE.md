@@ -1,6 +1,6 @@
 # whoopsie
 
-The vibe-coder sibling to Pisama. TypeScript-only, Vercel-first, free forever.
+The vibe-coder sibling to Pisama. TypeScript-only, Vercel-first.
 
 See `~/.claude/plans/how-could-we-make-typed-hennessy.md` for the full design rationale.
 
@@ -18,7 +18,7 @@ See `~/.claude/plans/how-could-we-make-typed-hennessy.md` for the full design ra
 ## Hard rules
 
 - Vibe-coder lens. Tone is "ship fast", not "research-grade". No MAST/TRAIL vocabulary in user-facing surfaces.
-- Free forever. No metering, no paid tier, no upsell copy. Conversion path is to Pisama main (do NOT link to pisama.ai from the landing yet — internal note).
+- No metering, no paid tier, no upsell copy. Conversion path is to Pisama main (do NOT link to pisama.ai from the landing yet — internal note).
 - Next.js + Vercel AI SDK only. No multi-framework support in v1.
 - TypeScript only. No Python.
 - Default-on PII redaction in the SDK. Privacy is load-bearing for the HN moment.

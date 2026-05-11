@@ -15,7 +15,7 @@ The mock test is currently the load-bearing one; the Sandbox layer is a richer "
 
 Both layers are guarded by `if: false` so the workflow file lints but never runs. To activate:
 
-### Mock-model layer only (free, no secrets needed)
+### Mock-model layer only (no charge, no secrets needed)
 
 1. Edit `.github/workflows/cross-framework.yml`
 2. Find the line `if: false # ← Remove this line to activate the workflow.` near the top of the `framework-matrix` job
@@ -43,7 +43,7 @@ To do a smoke test of the regression detection: introduce a deliberate bug into 
 
 - Mock layer: $0 (no network, no AI)
 - Sandbox layer: ~$0.50/month for 4 frameworks × ~30 runs/month × $0.0001 per gpt-4o-mini call
-- GitHub Actions minutes: ~30 minutes/month (mostly under free-tier)
+- GitHub Actions minutes: ~30 minutes/month (mostly under the bundled-minutes allowance)
 
 ## Maintenance
 

@@ -67,7 +67,7 @@ For each platform listed below, do the full flow. Record results in the log tabl
 
 Skipped from regular rotation. If/when Bolt is brought back into scope:
 
-1. Bolt's free tier paywalls mid-build. Need a paid Bolt account to run the full test.
+1. Bolt's starter quota paywalls mid-build. Need a paid Bolt account to run the full test.
 2. Bolt's WebContainer outbound egress is unverified. If `whoopsie verify` fails with a network error, that's the likely cause.
 
 ## Results log
@@ -82,7 +82,7 @@ Update this table each run. Commit alongside any prompt or SDK changes that trig
 | 2026-05-10 | 0.0.2 | n/a | Bolt | ✓ | partial | n/a | n/a | ✗ paywall | Stopped at token paywall mid-build. |
 | 2026-05-10 | n/a | n/a | Cursor | not tested | — | — | — | — | Desktop app, no browser automation. Needs manual user. |
 | 2026-05-10 | 0.3.0 | 0.2.0 | Lovable | **✓** (migration from old wrap) | **✓** (`observe(openai("gpt-4o-mini"), { redact: "metadata-only" })` at correct streamText line in `src/routes/api/chat.ts`) | ✓ (per Lovable AI) | not run (no terminal) | **✗ silent (no trace)** | **Critical finding:** even with perfect AI execution + correct code in the correct file, traces don't fire on Lovable. Chat returns real OpenAI completion ("2 + 2 equals 4."). Same silent no-op as first test. Suggests env var not propagating to runtime OR `ai` version mismatch OR Lovable preview egress blocked. Needs server-log access (UI doesn't expose them) or runtime probe to isolate. |
-| 2026-05-10 | 0.3.0 | 0.2.0 | v0 | **✓** (migration from typo'd wrap) | **✓** (`Line 11: Changed whoopsieMiddleware({...})(openai(...)) to observe(openai("gpt-4o-mini"), { redact: "metadata-only" })`) | ✓ (already set in Vars) | not run | not tested | v0 hit "Maximum context limit reached" before testing. Sandbox subsequently died (410). Migration code is correct; runtime untested. **Sub-finding:** install prompt may be too long for v0's free-tier context window. |
+| 2026-05-10 | 0.3.0 | 0.2.0 | v0 | **✓** (migration from typo'd wrap) | **✓** (`Line 11: Changed whoopsieMiddleware({...})(openai(...)) to observe(openai("gpt-4o-mini"), { redact: "metadata-only" })`) | ✓ (already set in Vars) | not run | not tested | v0 hit "Maximum context limit reached" before testing. Sandbox subsequently died (410). Migration code is correct; runtime untested. **Sub-finding:** install prompt may be too long for v0's starter-quota context window. |
 | 2026-05-10 | 0.3.0 | 0.2.0 | Replit | **✓** (Replit AI proactively diagnosed `ai@^6` peer-dep mismatch in its earlier response — "if whoopsieMiddleware throws at runtime, that's the likely cause") | pending build | ✓ | not run | not tested | **Major finding:** Replit AI identified the root cause of the original "hang" was a peer dependency mismatch (`ai@4.x` installed, `@whoopsie/sdk` needs `ai@^6`). This explains the silent failures and is fixable in our SDK by checking the `ai` version at `observe()` construction. Workflow rebuild took longer than the test window. |
 
 ## What to do if a platform regresses
