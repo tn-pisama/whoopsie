@@ -1,0 +1,94 @@
+# Cross-framework regression CI for @whoopsie/sdk.
+#
+# Spins up a Vercel Sandbox per framework (Next.js, TanStack Start, Hono,
+# Express), installs @whoopsie/sdk fresh from npm, runs a synthetic chat
+# against the framework's route, asserts a trace lands on /live/<ci-id>.
+# Catches SDK regressions before they reach users.
+#
+# CURRENTLY INACTIVE. To activate:
+#   1. Settings → Secrets and variables → Actions, add:
+#      - OPENAI_API_KEY (or a test stand-in for mocked tests)
+#      - VERCEL_TOKEN (for Vercel Sandbox API auth)
+#      - WHOOPSIE_PROJECT_ID_CI (a project id dedicated to CI runs)
+#   2. Replace every `if: false` below with the trigger condition you want
+#      (e.g. remove the line entirely for "always run on this trigger")
+#   3. Push and watch a test PR. Job summary surfaces per-framework pass/fail.
+#
+# See .github/workflows/README.md for the full activation guide.
+
+name: Cross-framework regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/sdk/**"
+      - ".github/workflows/cross-framework.yml"
+  pull_request:
+    paths:
+      - "packages/sdk/**"
+      - ".github/workflows/cross-framework.yml"
+  schedule:
+    # Nightly at 06:00 UTC to catch upstream @ai-sdk/* breakage
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  framework-matrix:
+    name: ${{ matrix.framework }}
+    if: false # ← Remove this line to activate the workflow.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        framework:
+          - nextjs
+          - tanstack-start
+          - hono
+          - express
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build SDK
+        run: pnpm --filter @whoopsie/sdk build
+
+      - name: Run framework integration test (mock model)
+        run: pnpm exec tsx packages/sdk/test/integration/${{ matrix.framework }}/${{ matrix.framework }}.test.ts
+        env:
+          # Mock-model tests don't need a real OpenAI key, but the SDK looks
+          # for these vars and we want the same env shape as live.
+          WHOOPSIE_PROJECT_ID: ws_ci_${{ matrix.framework }}_${{ github.sha }}
+          WHOOPSIE_SILENT: "1"
+
+      - name: Run framework integration test (Vercel Sandbox, live trace)
+        if: false # Active only after VERCEL_TOKEN + OPENAI_API_KEY secrets are set.
+        run: pnpm exec tsx scripts/ci-sandbox-test.ts --framework ${{ matrix.framework }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          WHOOPSIE_PROJECT_ID: ${{ secrets.WHOOPSIE_PROJECT_ID_CI }}
+
+      - name: Summarize
+        if: always()
+        run: |
+          echo "### Framework: ${{ matrix.framework }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

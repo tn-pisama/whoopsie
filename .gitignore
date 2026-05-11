@@ -11,3 +11,4 @@ dist/
 coverage/
 .vercel
 .env.production
+apps/web/tsconfig.tsbuildinfo
