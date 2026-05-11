@@ -32,6 +32,14 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 ## `@whoopsie/sdk`
 
+### `0.3.1` — 2026-05-10
+
+**Added**
+- Peer-dependency version guard in `observe()`. If you call `observe(model, ...)` with a model whose `specificationVersion !== "v3"` (which happens when the installed `ai` / `@ai-sdk/*` packages are older than v6 / v3), the SDK logs a directional warning naming the fix command (`npm install ai@^6 @ai-sdk/openai@^2 @ai-sdk/provider@^3`) and explaining that observe() will silently no-op until upgraded. Catches the failure mode Replit's AI diagnosed during the 2026-05-10 cross-platform test: "the peer dependency expects ai@^6 but the installed version is 4.x" — previously a silent no-op (chat works, zero traces), now a loud `console.warn` at the first observe() call.
+
+**Tests**
+- 4 new tests in `observe-version-guard.test.ts`: warns on v2 model, doesn't warn on v3 model, dedupes per provider key, respects `WHOOPSIE_SILENT=1`.
+
 ### `0.3.0` — 2026-05-10
 
 **Added**
