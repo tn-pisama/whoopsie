@@ -6,7 +6,7 @@ When the cross-platform test (see `CROSS_PLATFORM_TEST_RUNBOOK.md`) finds a brok
 
 ### Check the SDK diagnostics first
 
-The `@whoopsie/sdk` 0.2.0 release added loud-by-default logging. **Always check server logs before any other debug step.** Three possible states:
+The `@whoopsie/sdk` 0.2.0 release added loud-by-default logging; 0.3.0 added partial-flush warnings + a misuse guardrail. **Always check server logs before any other debug step.** Three possible states:
 
 | Log seen | Meaning | Next step |
 |---|---|---|
@@ -16,7 +16,7 @@ The `@whoopsie/sdk` 0.2.0 release added loud-by-default logging. **Always check 
 
 ### Run `npx @whoopsie/cli verify` (any platform with a terminal)
 
-If the platform offers a terminal (Replit, Cursor, occasionally others), run `npx -y @whoopsie/cli@0.1.0 verify`. It's an SDK-independent round-trip check.
+If the platform offers a terminal (Replit, Cursor, occasionally others), run `npx -y @whoopsie/cli@0.2.0 verify`. It's an SDK-independent round-trip check.
 
 Outcome tells you which layer is broken:
 
@@ -38,11 +38,25 @@ If the integration is silently failing and the 30s warning isn't conclusive, set
 
 ### Most likely failure modes
 
+#### Mode 0 (new in SDK 0.3.0): Misuse guardrail fires with a directional error
+
+If the AI wrote `whoopsieMiddleware(opts)(model)` — the v0 typo from the 2026-05-10 test — the SDK 0.3.0 misuse guardrail catches it at the first call and throws:
+
+```
+TypeError: [whoopsie] Don't call whoopsieMiddleware(opts) as a function.
+Use observe(model, opts) from @whoopsie/sdk instead — single call,
+no wrapLanguageModel ceremony. See https://whoopsie.dev/install
+```
+
+**Detection**: 500 response from `/api/chat`. v0 console shows the TypeError above.
+
+**Fix**: Update v0's route to use `observe()` per the message. The chat input takes "Please replace the whoopsieMiddleware wrap with `observe(openai('gpt-4o-mini'), { redact: 'metadata-only' })` from `@whoopsie/sdk`. Remove the `wrapLanguageModel` import."
+
 #### Mode 1: AI still ignores prompt and writes `whoopsieMiddleware(...)(model)` despite the "do not" lines
 
-The 2026-05-10 failure. The new install prompt explicitly forbids this pattern but AI agents skim.
+The 2026-05-10 failure pre-Mode 0 fix. Now caught at runtime by the guardrail above, but if the user doesn't see logs, they may still file this as a generic "chat broken" report.
 
-**Detection**: Inspect `app/api/chat/route.ts` in v0's code view. If the wrap reads as `whoopsieMiddleware({...})(openai(...))`, this is it.
+**Detection**: Inspect `app/api/chat/route.ts` in v0's code view. If the wrap reads as `whoopsieMiddleware({...})(openai(...))`, this is it. SDK 0.3.0 will throw on first request with the message above.
 
 **Fix template**:
 1. Update `apps/web/lib/install-prompts.ts`: make the "do not" lines louder, possibly with a literal counter-example showing what NOT to write. Something like:

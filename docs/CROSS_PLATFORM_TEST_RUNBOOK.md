@@ -19,8 +19,8 @@ The previous session's transcript has a leaked OpenAI key in it. The harness blo
    - Lovable: Cloud tab → Secrets → add `OPENAI_API_KEY`
    - Replit: Secrets pane (padlock icon) → add `OPENAI_API_KEY`
 3. **Note current `@whoopsie/sdk` + `@whoopsie/cli` versions on npm** (check `package.json` or `npm view @whoopsie/sdk version`):
-   - SDK: 0.2.0
-   - CLI: 0.1.0
+   - SDK: 0.3.0 (adds misuse guardrail + exporter 207 handling on top of 0.2.0's diagnostics)
+   - CLI: 0.2.0 (patcher now emits `observe()` — earlier 0.1.0 still emitted the old pattern, which was the source of the test-vs-install-page contradiction)
 4. **Get a fresh project ID**:
    - Visit https://whoopsie.dev/install in your browser. Note the `ws_xxx` ID in the URL.
    - That's the ID for this test session. Use the same one for all four platforms.
@@ -84,7 +84,7 @@ In a new tab, open `https://whoopsie.dev/live/<projectId>`. The trace should app
 
 ### 7. Check server logs for SDK diagnostics
 
-The new SDK 0.2.0 logs:
+The new SDK 0.3.0 logs (these were added in 0.2.0; 0.3.0 also adds partial-flush warnings):
 - `[whoopsie] enabled · project=ws_xxx… · redact=metadata-only` — proves SDK is loaded with the right env var
 - After 30s without events: `[whoopsie] No events fired in 30s. Common causes…` — proves the wrap isn't actually getting invoked
 
@@ -99,7 +99,7 @@ Capture which logs appear. Absent `[whoopsie] enabled` log means env var isn't r
 
 - v0: no obvious terminal — skip
 - Lovable: no obvious terminal — skip
-- Replit: console pane has a terminal. Run `npx -y @whoopsie/cli@0.1.0 verify`. Capture output.
+- Replit: console pane has a terminal. Run `npx -y @whoopsie/cli@0.2.0 verify`. Capture output.
 
 If the platform offers a terminal, this is the cleanest test: `verify` does a synthetic round-trip and confirms ingestion works independent of the user's code.
 
@@ -124,9 +124,9 @@ Update the results log in `docs/PLATFORM_TESTING.md` with:
 
 Based on what we know post-fixes (commit `a20bbf1`):
 
-- **v0**: high confidence pass. The new prompt's "do not write your own `wrapLanguageModel` pattern" should prevent the typo that caused last run's 500. Risk: v0's preview iframe may have its own network egress quirk we haven't seen.
-- **Lovable**: medium confidence. Now includes a TanStack Start framework note in the prompt. Risk: Lovable's AI may still place the wrap in the wrong TanStack route file (the prompt tells it to search for `streamText` first, but AI agents skim). If trace doesn't land, check Lovable's server logs for the SDK 0.2.0 30s warning — that's the diagnostic.
-- **Replit**: low confidence. Last run hung with no diagnostic. With SDK 0.2.0 + CLI 0.1.0, server logs should now tell us immediately whether the middleware loaded. If `[whoopsie] enabled` appears but no event fires, the wrap is in the wrong file. If it doesn't appear, env var or import chain.
+- **v0**: high confidence pass. The new prompt's "do not write your own `wrapLanguageModel` pattern" should prevent the typo that caused last run's 500. Additionally, SDK 0.3.0's misuse guardrail throws a directional error at runtime if v0's AI still constructs `whoopsieMiddleware(opts)(model)` — so even if the prompt is ignored, the failure is loud and self-explaining instead of cryptic. Risk: v0's preview iframe may have its own network egress quirk we haven't seen.
+- **Lovable**: medium confidence. Now includes a TanStack Start framework note in the prompt. Risk: Lovable's AI may still place the wrap in the wrong TanStack route file (the prompt tells it to search for `streamText` first, but AI agents skim). If trace doesn't land, check Lovable's server logs for the SDK 0.3.0 30s warning — that's the diagnostic.
+- **Replit**: low confidence. Last run hung with no diagnostic. With SDK 0.3.0 + CLI 0.2.0, server logs should now tell us immediately whether the middleware loaded. If `[whoopsie] enabled` appears but no event fires, the wrap is in the wrong file. If it doesn't appear, env var or import chain. Replit also has a terminal — run `npx -y @whoopsie/cli@0.2.0 verify` to isolate the layer.
 
 ## What to do on failures
 

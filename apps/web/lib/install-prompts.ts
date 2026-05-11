@@ -60,8 +60,8 @@ That's it. Do not import \`wrapLanguageModel\` from "ai". Do not call \`whoopsie
 
 Could you:
 
-1. First: check whether my project actually has a \`streamText\` or \`generateText\` call from the \`ai\` package (usually under \`app/api/...\`). If there's no such call yet, just tell me and don't install anything.
-2. If there is one: add \`@whoopsie/sdk\` as a dependency and replace the existing model expression with \`observe(<existing>, { redact: "metadata-only" })\`. Keep the underlying model; only wrap it.
+1. First: **find the existing \`streamText\` or \`generateText\` call by searching the repo for those exact strings**. Don't guess at file paths. If you don't find one, tell me and skip the install — there's nothing to instrument.
+2. Edit \`observe(<existing-model-expression>, { redact: "metadata-only" })\` **directly at the line where the model is passed to streamText/generateText**. Do not create a new file. Do not put the wrap in a separate \`observability.ts\` or \`lib/\` module. The wrap must be on the model expression that the actual streamText call uses, or it does nothing.
 3. Tell me which file you changed and the exact line you changed.
 
 I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}.
