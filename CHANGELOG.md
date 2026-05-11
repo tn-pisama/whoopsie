@@ -32,6 +32,18 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 ## `@whoopsie/sdk`
 
+### `0.4.0` — 2026-05-10
+
+**Added**
+- **Eager-flush mode** for serverless / edge runtimes. Awaits the trace POST inline with the request lifecycle so the isolate stays alive until the export completes. Default lazy-flush mode (setInterval-batched) silently drops events on Cloudflare Workers, Vercel Edge Functions, Deno Deploy, and other runtimes that freeze the isolate after the response.
+- **Auto-detection** of edge runtimes via `globalThis.WebSocketPair` (Workers) and `globalThis.EdgeRuntime` (Vercel Edge). When detected, eager mode is enabled by default. Override with `observe(model, { eager: false })` to opt out, or `eager: true` to force on in environments we don't detect.
+
+**Rationale**
+- The 2026-05-10 cross-platform integration test surfaced Lovable's published apps as silently dropping traces despite correct integration code. Lovable's own AI diagnosed the root cause: their apps run on Cloudflare Workers (with `nodejs_compat`), which freezes the isolate after the response returns — the lazy `setInterval` flush in the exporter never fires, and the in-memory trace buffer is GC'd with the isolate. Eager mode fixes this category of failure for Workers, Edge, and any future serverless runtime without a background event loop.
+
+**Tests**
+- 5 new tests in `eager-flush.test.ts`: eager wrapStream awaits export inline, lazy wrapStream defers until interval, wrapGenerate path eager, auto-detect on `WebSocketPair` global, explicit `eager: false` override.
+
 ### `0.3.1` — 2026-05-10
 
 **Added**

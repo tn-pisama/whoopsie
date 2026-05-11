@@ -20,6 +20,34 @@ export interface WhoopsieMiddlewareOptions {
    * so the dashboard can ping you when whoopsie ships paid alerts. Opt-in.
    */
   contact?: string;
+  /**
+   * Eager flush mode. When true, traces are flushed inline with the request
+   * lifecycle — `wrapGenerate` awaits the export before returning, and
+   * `wrapStream`'s tap awaits the export when the upstream closes. Required
+   * for serverless runtimes without a background event loop (Cloudflare
+   * Workers, Vercel Edge Functions, Deno Deploy) where the isolate is frozen
+   * after the response finishes streaming — the lazy `setInterval` flush
+   * never fires and traces are silently dropped.
+   *
+   * Default: auto-detected. We turn on eager mode when we detect a Workers /
+   * Edge runtime (presence of `WebSocketPair` or `EdgeRuntime` global). Set
+   * explicitly to `false` to disable, or `true` to force it on (slight added
+   * latency on each generation as the trace POST is awaited inline).
+   */
+  eager?: boolean;
+}
+
+function detectEdgeRuntime(): boolean {
+  // Cloudflare Workers exposes WebSocketPair as a global. nodejs_compat
+  // doesn't remove it (it's a Workers-only platform API).
+  if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== "undefined") {
+    return true;
+  }
+  // Vercel Edge runtime sets EdgeRuntime global.
+  if (typeof (globalThis as { EdgeRuntime?: unknown }).EdgeRuntime !== "undefined") {
+    return true;
+  }
+  return false;
 }
 
 interface ModelLike {
@@ -157,6 +185,12 @@ function buildMiddleware(
     baseMetadata.contact = opts.contact;
   }
 
+  // Eager flush: required on Cloudflare Workers / Vercel Edge / Deno Deploy
+  // where the isolate is frozen after the response finishes — the lazy
+  // setInterval-based flush never fires and traces get silently dropped.
+  // Auto-detect by default; opts.eager overrides.
+  const eager = opts.eager ?? detectEdgeRuntime();
+
   // Loud-by-default diagnostics. Silent failure was the most common integration
   // bug on AI builder platforms; these logs surface it the moment it happens.
   logEnabled(projectId, redactMode);
@@ -186,6 +220,9 @@ function buildMiddleware(
           }),
         );
         noteEventEnqueued();
+        // In eager mode, await the flush before returning so the trace POST
+        // completes before the isolate has a chance to freeze (Workers/Edge).
+        if (eager) await exporter.flush();
         return result;
       } catch (error) {
         exporter.enqueue(
@@ -203,6 +240,7 @@ function buildMiddleware(
           }),
         );
         noteEventEnqueued();
+        if (eager) await exporter.flush();
         throw error;
       }
     },
@@ -231,6 +269,7 @@ function buildMiddleware(
           }),
         );
         noteEventEnqueued();
+        if (eager) await exporter.flush();
         throw error;
       }
 
@@ -246,7 +285,11 @@ function buildMiddleware(
           collectChunk(chunk, collected);
           controller.enqueue(chunk);
         },
-        flush() {
+        // `flush` may return a promise — the TransformStream's writable side
+        // won't close until it resolves. In eager mode we await the exporter
+        // here so the response stream stays open (and the Worker isolate
+        // stays alive) until the trace POST completes.
+        async flush() {
           exporter.enqueue(
             buildFromStream({
               projectId,
@@ -262,6 +305,7 @@ function buildMiddleware(
             }),
           );
           noteEventEnqueued();
+          if (eager) await exporter.flush();
         },
       });
 
