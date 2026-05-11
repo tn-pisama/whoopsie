@@ -47,6 +47,23 @@ function detectEdgeRuntime(): boolean {
   if (typeof (globalThis as { EdgeRuntime?: unknown }).EdgeRuntime !== "undefined") {
     return true;
   }
+  // Vercel Node Functions also freeze after the response — they have a real
+  // process.env and Node APIs, but no long-running background loop. The
+  // setInterval-based lazy flush gets killed by unref() and the function exit
+  // before it fires for short responses. Treat Vercel as eager too. Detected
+  // via `VERCEL=1` which Vercel sets on every deployment runtime (preview,
+  // production, edge, function).
+  if (typeof process !== "undefined" && process.env.VERCEL === "1") {
+    return true;
+  }
+  // AWS Lambda / Netlify Functions / Cloud Run — similar serverless runtimes
+  // that also freeze after response. Cheap to add since the markers are
+  // standard.
+  if (typeof process !== "undefined") {
+    if (process.env.AWS_LAMBDA_FUNCTION_NAME) return true;
+    if (process.env.NETLIFY === "true") return true;
+    if (process.env.K_SERVICE) return true; // Cloud Run
+  }
   return false;
 }
 

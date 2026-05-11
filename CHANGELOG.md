@@ -32,6 +32,18 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 ## `@whoopsie/sdk`
 
+### `0.4.1` — 2026-05-10
+
+**Added**
+- **Extended serverless auto-detection** for eager mode. 0.4.0 caught Cloudflare Workers (`WebSocketPair`) and Vercel Edge (`EdgeRuntime`). 0.4.1 adds:
+  - `VERCEL=1` — Vercel Functions (Node runtime). Surfaced by the v0 published-app test on 2026-05-10: chat returned HTTP 200 but no trace fired, because the Vercel Node Function froze after the response before the lazy `setInterval` flush could complete.
+  - `AWS_LAMBDA_FUNCTION_NAME` — AWS Lambda.
+  - `NETLIFY=true` — Netlify Functions.
+  - `K_SERVICE` — Google Cloud Run.
+
+**Tests**
+- 5 new tests in `serverless-detect.test.ts`: each marker enables eager mode; lazy mode is the default when no marker is set.
+
 ### `0.4.0` — 2026-05-10
 
 **Added**
