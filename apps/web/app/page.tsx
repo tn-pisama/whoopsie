@@ -8,15 +8,18 @@ const PLATFORMS = [
   { slug: "v0", name: "v0" },
 ] as const;
 
-const ADVANCED_SAMPLE = `import { wrapLanguageModel, streamText } from "ai";
-import { whoopsieMiddleware } from "@whoopsie/sdk";
+const ADVANCED_SAMPLE = `import { streamText, convertToModelMessages } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { observe } from "@whoopsie/sdk";
 
-const model = wrapLanguageModel({
-  model: openai("gpt-4o"),
-  middleware: whoopsieMiddleware(),
-});
-
-await streamText({ model, prompt: "..." });`;
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  const result = streamText({
+    model: observe(openai("gpt-4o"), { redact: "metadata-only" }),
+    messages: convertToModelMessages(messages),
+  });
+  return result.toUIMessageStreamResponse();
+}`;
 
 export default function LandingPage() {
   return (
@@ -43,8 +46,7 @@ export default function LandingPage() {
         </h1>
         <p className="mt-6 max-w-xl text-lg text-ink-muted">
           Your chatbot loops. Your agent burns through tokens. Your RAG bot makes
-          things up. Whoopsie catches it live and shows you what happened. Free
-          forever.
+          things up. Whoopsie catches it live and shows you what happened.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-3">
@@ -140,29 +142,82 @@ export default function LandingPage() {
 
       <section className="border-t border-line py-16">
         <h2 className="text-2xl font-semibold tracking-tight">
-          What we catch
+          Failures we&apos;ve caught before
         </h2>
         <p className="mt-4 max-w-xl text-ink-muted">
-          Each one runs locally on your traces. No second LLM call, no extra cost.
+          AI failures don&apos;t throw exceptions. They return a response that looks fine — until your OpenAI bill arrives or a screenshot shows up on Twitter. Six ways your app can break silently, and the detector that catches each one before your users do.
         </p>
-        <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2">
           {[
-            ["loop", "Your agent kept calling the same tool over and over."],
-            ["repetition", "Your bot's reply repeated the same line."],
-            ["cost-spike", "A single call burned a lot of tokens or dollars."],
-            ["completion-gap", "Stopped early or ran on forever."],
-            ["hallucination-lite", "Said something that wasn't in its sources."],
-            ["context-neglect", "Ignored the user's settings or context."],
-            ["derailment", "Did the wrong thing for the task it was given."],
-          ].map(([name, plain]) => (
-            <li key={name} className="rounded-md border border-line bg-white p-4">
-              <div className={`${GeistMono.className} text-xs uppercase text-coral`}>
-                {name}
+            {
+              tag: "cost",
+              headline:
+                "Your Lovable app went viral overnight. The OpenAI bill was $400 by morning.",
+              body: "An agent quietly looped on a tool call, 9k tokens per turn, for twelve hours. The cost detector flags the first call that crosses $0.50 or 8k tokens — you’d have seen it before the bill arrived.",
+            },
+            {
+              tag: "hallucination",
+              headline:
+                "Customer-support bot invented a product feature that doesn’t exist.",
+              body: "Your RAG retrieved nothing useful, so the bot made something up to sound helpful. The hallucination detector compares response claims against the Sources block in the prompt and flags the gap.",
+            },
+            {
+              tag: "loop",
+              headline:
+                "Web-search agent kept calling search → search → search and never answered.",
+              body: "Six identical tool calls in a row. The loop detector flags tool repetition, low tool diversity, and A→B→A→B cycles before your user gives up and refreshes.",
+            },
+            {
+              tag: "repetition",
+              headline:
+                "Chatbot kept ending every turn with “Is there anything else?” even after the user said no.",
+              body: "Same line three times in five turns. The repetition detector catches line-level and n-gram repeats in the completion text.",
+            },
+            {
+              tag: "context",
+              headline:
+                "RAG bot ignored the user’s “vegetarian only” filter and recommended chicken parm.",
+              body: "Response used zero key tokens from the user’s context block. The context detector flags it before the user notices and DMs you.",
+            },
+            {
+              tag: "completion",
+              headline:
+                "Your summarizer stopped at the 4k token cap mid-sentence and your users never saw the end.",
+              body: "Finish reason was length, not stop. The completion detector catches premature stops on questions and runaway 4k+ token outputs.",
+            },
+          ].map((s) => (
+            <li
+              key={s.tag}
+              className="rounded-md border border-line bg-white p-5"
+            >
+              <div
+                className={`${GeistMono.className} text-xs uppercase text-coral`}
+              >
+                {s.tag}
               </div>
-              <p className="mt-1 text-sm text-ink-soft">{plain}</p>
+              <h3 className="mt-2 font-semibold leading-snug text-ink">
+                {s.headline}
+              </h3>
+              <p className="mt-2 text-sm text-ink-muted">{s.body}</p>
             </li>
           ))}
         </ul>
+        <p className="mt-8 max-w-xl text-sm text-ink-muted">
+          A seventh detector —{" "}
+          <span className={`${GeistMono.className} text-coral`}>derailment</span>{" "}
+          — catches when an agent&apos;s tool sequence doesn&apos;t match the task it was given. All seven ship in v1, run locally on every trace, and add zero per-call cost.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center gap-4">
+          <a
+            href="/install"
+            className={`${GeistMono.className} inline-flex items-center rounded-md bg-ink px-5 py-2.5 text-sm text-paper transition hover:bg-coral`}
+          >
+            get your install prompt →
+          </a>
+          <span className="text-sm text-ink-muted">
+            Paste into Lovable, Replit, Bolt, Cursor, or v0. 60 seconds.
+          </span>
+        </div>
       </section>
 
       <section className="border-t border-line py-16">
@@ -191,7 +246,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-line py-12 font-mono text-xs text-ink-muted">
-        <p>MIT-licensed SDK. Hosted dashboard free forever.</p>
+        <p>MIT-licensed SDK. Hosted dashboard at no charge.</p>
         <p className="mt-2">No accounts. No metering. No upsell. Pre-alpha.</p>
         <p className="mt-3">
           <a href="/demo" className="hover:text-ink">demo</a>

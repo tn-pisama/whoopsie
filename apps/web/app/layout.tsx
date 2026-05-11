@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "whoopsie — see your AI app's failures live",
   description:
-    "Vercel AI SDK middleware that catches loops, hallucinations, and cost spikes. Free forever.",
+    "Vercel AI SDK middleware that catches loops, hallucinations, and cost spikes.",
   metadataBase: new URL("https://whoopsie.dev"),
 };
 

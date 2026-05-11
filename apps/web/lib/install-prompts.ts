@@ -58,11 +58,19 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 That's it. Do not import \`wrapLanguageModel\` from "ai". Do not call \`whoopsieMiddleware(...)\` directly. Do not pass the middleware as an option — \`observe(model, opts)\` returns the wrapped model.
 
+**Vercel AI SDK v6 gotchas (very common ai@5 → ai@6 mistakes):**
+
+- The chat route must end with \`return result.toUIMessageStreamResponse()\` — \`toDataStreamResponse()\` was removed in v6.
+- Before passing messages to \`streamText\`, run them through \`convertToModelMessages\`: \`streamText({ model, messages: convertToModelMessages(messages) })\`. The React \`useChat\` hook posts UIMessages with \`parts\` arrays; \`streamText\` only accepts ModelMessages.
+- On the React side, \`useChat\` no longer returns \`{ input, handleInputChange, handleSubmit }\`. Use \`{ messages, sendMessage, status } = useChat()\` and manage the input string yourself with \`useState\`. Call \`sendMessage({ text: input })\` on submit.
+- The eager-flush serverless mode auto-detects Vercel (\`VERCEL=1\`), AWS Lambda, Netlify, Cloud Run, Cloudflare Workers, and Vercel Edge. You do not need to configure it; just confirm the install logs print \`[whoopsie] enabled · project=ws_…\` on first request.
+
 Could you:
 
 1. First: **find the existing \`streamText\` or \`generateText\` call by searching the repo for those exact strings**. Don't guess at file paths. If you don't find one, tell me and skip the install — there's nothing to instrument.
 2. Edit \`observe(<existing-model-expression>, { redact: "metadata-only" })\` **directly at the line where the model is passed to streamText/generateText**. Do not create a new file. Do not put the wrap in a separate \`observability.ts\` or \`lib/\` module. The wrap must be on the model expression that the actual streamText call uses, or it does nothing.
-3. Tell me which file you changed and the exact line you changed.
+3. If the route or client is still on the ai@5 API (any of: \`toDataStreamResponse()\`, no \`convertToModelMessages\` call on the messages, \`handleInputChange\`/\`handleSubmit\` from \`useChat\`), migrate it to ai@6 per the gotchas above as part of the same change.
+4. Tell me which file you changed and the exact line you changed.
 
 I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}.
 
@@ -72,6 +80,9 @@ If you'd rather wait until the package has more adoption, suggest a more establi
 
 const LOVABLE_FRAMEWORK_NOTE =
   "Important framework note: this project runs on **TanStack Start (React 19 + Vite)**, not Next.js. The streamText / generateText call is in a TanStack server file route (typically `src/routes/api/chat.ts` or similar), not `app/api/chat/route.ts`. Find the actual file by searching the repo for `streamText` or `generateText` — that's where the wrap goes. The @whoopsie/sdk `observe()` helper works identically on TanStack Start since it operates on the Vercel AI SDK's model object, which is framework-agnostic.";
+
+const REPLIT_FRAMEWORK_NOTE =
+  "Important Replit gotchas (verified end-to-end 2026-05-10): (1) The `.replit` config sometimes routes `/api/*` to a separate Express server on port 8080 instead of the Next.js dev server. If a public POST to `/api/chat` returns an Express-style 404 (`Cannot POST /api/chat`) while `/` returns a Next.js page, the proxy needs to be reconfigured so Next.js owns `/api/*` — otherwise the chat route and the observe() wrap never execute. (2) When you click **Publish** to deploy to `.replit.app`, the dev Workspace Secrets do **not** carry over to the Autoscale Deployment automatically. Open the deployment's Manage tab and add `OPENAI_API_KEY` and `WHOOPSIE_PROJECT_ID` (any other `process.env.*` the chat route reads) to the deployment-side secrets before testing the published URL, or `/api/chat` will return HTTP 500. (3) If the build fails at `next build` with a TypeScript error on `useChat({ api: \"/api/chat\" })`, drop the `api` option — it doesn't exist in `@ai-sdk/react` v3 (which ships with ai@6); the default is `/api/chat` already.";
 
 export const platforms: PlatformPrompt[] = [
   {
@@ -95,11 +106,13 @@ export const platforms: PlatformPrompt[] = [
     blurb:
       "Open your Replit project, ask Replit Agent in the chat, paste the prompt below.",
     whereToPaste: "the Replit Agent chat",
-    envVarLocation: "the Secrets pane (left sidebar, padlock icon)",
+    envVarLocation: "the Secrets pane (left sidebar, padlock icon); for a published .replit.app deployment, also add the same secrets to the deployment's Manage tab",
+    frameworkNote: REPLIT_FRAMEWORK_NOTE,
     template: (id) =>
       baseInstructions(
         id,
-        "the Replit Secrets pane (left sidebar, padlock icon)",
+        "the Replit Secrets pane (left sidebar, padlock icon); for a published .replit.app deployment, also add the same secrets to the deployment's Manage tab",
+        REPLIT_FRAMEWORK_NOTE,
       ),
   },
   {
@@ -109,12 +122,11 @@ export const platforms: PlatformPrompt[] = [
       "In your Bolt project, paste the prompt below into the chat with bolt.new's AI.",
     whereToPaste: "the bolt.new chat",
     envVarLocation: "the .env file at the project root",
-    // Marked untested: the cross-platform integration test on 2026-05-10
-    // ran out of Bolt free-tier tokens before reaching the trace-landing
-    // step. Untested means we don't know if the AI accepts the prompt
-    // cleanly or whether Bolt's WebContainer can reach whoopsie.dev/api/v1.
-    // Re-enable once verified end-to-end.
-    untested: true,
+    // Verified end-to-end 2026-05-11: Bolt's AI installs @whoopsie/sdk@^0.4.1
+    // with the canonical observe() pattern, the WebContainer reaches
+    // whoopsie.dev/api/v1/spans, and a clean trace lands (e.g.
+    // Ug0bt4bfSnHD8WMIaOBml, 18/5 tokens, no error). Once OPENAI_API_KEY is
+    // in .env the chat returns real gpt-4o-mini responses.
     template: (id) => baseInstructions(id, "the .env file at the project root"),
   },
   {

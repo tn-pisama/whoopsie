@@ -73,7 +73,7 @@ export function TermsGate({
         >
           privacy policy
         </a>
-        . Whoopsie is free, pre-alpha, single-maintainer; for side projects, not
+        . Whoopsie is pre-alpha, single-maintainer; for side projects, not
         production-critical systems. There&apos;s no SLA and we may change or
         shut things down at any time.
       </p>

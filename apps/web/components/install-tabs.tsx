@@ -68,7 +68,7 @@ export function InstallTabs({
           <p>
             <strong className="font-medium text-ink">Untested.</strong> The
             cross-platform integration test didn&apos;t finish on {platform.name}{" "}
-            within free-tier limits, so this prompt isn&apos;t verified
+            within starter-quota limits, so this prompt isn&apos;t verified
             end-to-end yet. The wrap pattern itself is solid — your bigger risk
             is whether {platform.name}&apos;s runtime can reach{" "}
             <code className="font-mono">whoopsie.dev/api/v1/spans</code>. After

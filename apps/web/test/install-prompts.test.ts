@@ -41,17 +41,11 @@ test("Lovable platform includes the TanStack Start framework note", () => {
   assert.match(prompt, /React 19 \+ Vite/);
 });
 
-test("Bolt platform is marked untested (cross-platform test paywalled mid-build)", () => {
-  const bolt = getPlatform("bolt")!;
-  assert.equal(
-    bolt.untested,
-    true,
-    "Bolt has not been verified end-to-end with the current SDK+prompt",
-  );
-});
-
-test("non-Bolt platforms are not marked untested", () => {
-  for (const slug of ["lovable", "replit", "cursor", "v0"]) {
+test("all v1-supported platforms are verified end-to-end (no `untested` flag)", () => {
+  // Bolt was the last platform marked untested. Verified end-to-end on
+  // 2026-05-11 with a clean trace (Ug0bt4bfSnHD8WMIaOBml, no error). All five
+  // v1 platforms now ship without the untested badge.
+  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
     const p = getPlatform(slug)!;
     assert.notEqual(
       p.untested,
@@ -79,6 +73,46 @@ test("every platform's template mentions the privacy page", () => {
       out,
       /whoopsie\.dev\/privacy/,
       `${p.slug} template missing privacy link`,
+    );
+  }
+});
+
+test("base instructions teach the ai@6 migration gotchas (convertToModelMessages + toUIMessageStreamResponse + sendMessage)", () => {
+  // The 2026-05-11 Replit re-test surfaced three ai@5 → ai@6 mistakes that
+  // every install will hit if the route or client is still on ai@5. The
+  // install prompt has to call these out or AI agents reconstruct the v5
+  // pattern and the chat 500s. See CHANGELOG.md SDK 0.4.x section for
+  // the rationale.
+  const sample = getPlatform("cursor")!.template("ws_test_12345");
+  assert.match(sample, /toUIMessageStreamResponse/);
+  assert.match(sample, /convertToModelMessages/);
+  assert.match(sample, /sendMessage/);
+});
+
+test("Replit platform includes the Replit framework note (proxy + deployment secrets)", () => {
+  const replit = getPlatform("replit")!;
+  const prompt = replit.template("ws_test_12345");
+  assert.match(
+    prompt,
+    /Cannot POST \/api\/chat/,
+    "Replit prompt must call out the Express-proxy 404 failure mode",
+  );
+  assert.match(
+    prompt,
+    /Manage tab/,
+    "Replit prompt must instruct adding secrets to the deployment Manage tab, not just the dev Workspace Secrets",
+  );
+});
+
+test("no platform's template teaches the deprecated toDataStreamResponse() pattern", () => {
+  for (const p of platforms) {
+    const out = p.template("ws_test_12345");
+    // The prompt MAY mention toDataStreamResponse in "if you see this,
+    // migrate it" lines, but must not show it as the target pattern.
+    assert.doesNotMatch(
+      out,
+      /return .*\.toDataStreamResponse\(\)/,
+      `${p.slug} template must not teach the removed ai@5 toDataStreamResponse() pattern`,
     );
   }
 });

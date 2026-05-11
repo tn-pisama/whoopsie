@@ -3,7 +3,7 @@ import { GeistMono } from "geist/font/mono";
 export const metadata = {
   title: "Terms of service — whoopsie",
   description:
-    "Plain-language terms for using whoopsie.dev: free use, no warranty, side projects only, no SLA.",
+    "Plain-language terms for using whoopsie.dev: no charge, no warranty, side projects only, no SLA.",
 };
 
 const LAST_UPDATED = "2026-05-01";
@@ -51,9 +51,9 @@ export default function TermsPage() {
           </p>
         </Block>
 
-        <Block heading="2. Free, but as-is">
+        <Block heading="2. No charge, but as-is">
           <p>
-            Whoopsie is free for everyone. There is no SLA, no uptime guarantee,
+            Whoopsie has no charge and no SLA, no uptime guarantee,
             and no support beyond best-effort responses to GitHub issues.
             It&apos;s a single-maintainer pre-alpha project. Use it on side
             projects, not anything where downtime or data loss would matter.
@@ -117,9 +117,8 @@ export default function TermsPage() {
           <p className="mt-3">
             To the maximum extent permitted by law, the maintainer&apos;s
             total liability for any claim arising out of your use of whoopsie
-            is capped at zero dollars (whoopsie is free; you didn&apos;t pay
-            anything). We are not liable for indirect, consequential, or
-            punitive damages.
+            is capped at zero dollars (you didn&apos;t pay anything). We are
+            not liable for indirect, consequential, or punitive damages.
           </p>
         </Block>
 

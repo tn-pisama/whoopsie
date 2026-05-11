@@ -70,7 +70,6 @@ export default function OpenGraphImage() {
             }}
           >
             Loops. Hallucinations. Cost spikes. Live, in plain English.
-            Free forever.
           </div>
         </div>
 
