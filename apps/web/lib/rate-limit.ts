@@ -58,6 +58,14 @@ const CONTACT_PER_IP_PER_MIN = parseInt(
   process.env.WHOOPSIE_CONTACT_PER_IP_PER_MIN ?? "30",
   10,
 );
+// Contact-form messages relay to Resend and into our inbox. Lower ceiling
+// than the contact-email opt-in (which only writes a Postgres row) because
+// every accepted message is one outbound Resend send + one inbound email
+// for us to read.
+const MESSAGE_PER_IP_PER_MIN = parseInt(
+  process.env.WHOOPSIE_MESSAGE_PER_IP_PER_MIN ?? "5",
+  10,
+);
 
 export function ipFromRequest(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
@@ -90,6 +98,10 @@ export function rateLimitContact(ip: string): ReturnType<typeof check> {
   return check(ipStore, `contact:${ip}`, CONTACT_PER_IP_PER_MIN);
 }
 
+export function rateLimitMessage(ip: string): ReturnType<typeof check> {
+  return check(ipStore, `message:${ip}`, MESSAGE_PER_IP_PER_MIN);
+}
+
 // Test hook — clears the in-memory state. Don't call from production code.
 export function _resetRateLimitForTests(): void {
   ipStore.clear();
@@ -101,4 +113,5 @@ export const RATE_LIMIT_CONFIG = {
   spansPerIpPerMin: SPANS_PER_IP_PER_MIN,
   spansPerProjectPerMin: SPANS_PER_PROJECT_PER_MIN,
   contactPerIpPerMin: CONTACT_PER_IP_PER_MIN,
+  messagePerIpPerMin: MESSAGE_PER_IP_PER_MIN,
 };

@@ -1,4 +1,5 @@
 import { GeistMono } from "geist/font/mono";
+import { ContactLink } from "@/components/contact-link";
 
 export const metadata = {
   title: "Terms of service — whoopsie",
@@ -150,13 +151,13 @@ export default function TermsPage() {
           <p>
             These terms are governed by the laws of the State of California,
             United States, without regard to conflict-of-laws rules. Any
-            dispute that can&apos;t be resolved by talking it out (start at{" "}
-            <a
-              href="mailto:hi@whoopsie.dev"
+            dispute that can&apos;t be resolved by talking it out (start by{" "}
+            <ContactLink
+              kind="hi"
               className="underline decoration-coral/40 underline-offset-2 hover:text-coral"
             >
-              hi@whoopsie.dev
-            </a>
+              sending a message
+            </ContactLink>
             ) goes to the state or federal courts in San Francisco County,
             California.
           </p>
@@ -172,12 +173,12 @@ export default function TermsPage() {
               Tuomo Nikulainen
             </a>
             . Email:{" "}
-            <a
-              href="mailto:hi@whoopsie.dev"
+            <ContactLink
+              kind="hi"
               className="underline decoration-coral/40 underline-offset-2 hover:text-coral"
             >
               hi@whoopsie.dev
-            </a>
+            </ContactLink>
             . Issues:{" "}
             <a
               href="https://github.com/tn-pisama/whoopsie/issues"

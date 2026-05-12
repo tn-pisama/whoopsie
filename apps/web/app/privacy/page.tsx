@@ -1,4 +1,5 @@
 import { GeistMono } from "geist/font/mono";
+import { ContactLink } from "@/components/contact-link";
 
 export const metadata = {
   title: "Privacy — whoopsie",
@@ -103,23 +104,11 @@ export default function PrivacyPage() {
 
         <Block heading="Delete or contact">
           <p>
-            Email{" "}
-            <a
-              href="mailto:hi@whoopsie.dev"
-              className="underline decoration-coral underline-offset-2"
-            >
-              hi@whoopsie.dev
-            </a>{" "}
-            with your project ID and we&apos;ll delete your traces, your
-            contact email, and your terms-acceptance row. Security reports go
-            to{" "}
-            <a
-              href="mailto:security@whoopsie.dev"
-              className="underline decoration-coral underline-offset-2"
-            >
-              security@whoopsie.dev
-            </a>
-            ; see{" "}
+            <ContactLink kind="hi">Send a message</ContactLink> with your
+            project ID and we&apos;ll delete your traces, your contact email,
+            and your terms-acceptance row. Security reports go to{" "}
+            <ContactLink kind="security">security@whoopsie.dev</ContactLink>;
+            see{" "}
             <a
               href="https://github.com/tn-pisama/whoopsie/blob/main/SECURITY.md"
               className="underline decoration-coral underline-offset-2"
@@ -127,6 +116,18 @@ export default function PrivacyPage() {
               SECURITY.md
             </a>
             .
+          </p>
+          <p className="mt-3 text-xs text-ink-muted">
+            Both forms relay through{" "}
+            <a
+              href="https://resend.com"
+              className="underline decoration-coral/40 underline-offset-2 hover:text-coral"
+            >
+              Resend
+            </a>{" "}
+            (our email delivery sub-processor) to the maintainer&apos;s mailbox.
+            If the relay is down, the form falls back to opening your mail
+            client with the message preserved.
           </p>
         </Block>
       </section>
