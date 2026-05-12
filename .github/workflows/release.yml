@@ -33,14 +33,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Build must run before Typecheck + Test. apps/web depends on
+      # @whoopsie/sdk and @whoopsie/detectors as workspace packages that ship
+      # from their dist/ folders (the package.json has `"main": "./dist/..."`
+      # and `"types": "./dist/..."`). Without dist/ populated, `tsc --noEmit`
+      # on apps/web throws TS2307 ("Cannot find module '@whoopsie/sdk'"). The
+      # same constraint bit Vercel's build (see vercel.json's three-dot
+      # filter fix shipped on 2026-05-11).
+      - name: Build
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
-
-      - name: Build
-        run: pnpm build
 
       - name: Publish to npm
         run: pnpm -r --filter ./packages/* publish --access public --no-git-checks --provenance
