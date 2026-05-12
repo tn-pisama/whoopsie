@@ -2,7 +2,7 @@
 //
 // Users on /privacy and /terms can click an in-page button instead of a
 // `mailto:` link. The button opens a modal where they type their email +
-// message; submit posts here, we relay through Resend to either
+// message; submit posts here, we relay through Brevo to either
 // hi@whoopsie.dev (general / deletion / disputes) or security@whoopsie.dev
 // (vuln disclosure). Both addresses forward to tuomo@pisama.ai via the
 // Cloudflare Email Routing setup on the zone.
@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { ipFromRequest, rateLimitMessage } from "@/lib/rate-limit";
+import { isMailConfigured, sendTransactional } from "@/lib/mail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +20,6 @@ export const dynamic = "force-dynamic";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MIN_BODY = 10;
 const MAX_BODY = 5000;
-const FROM_ADDRESS = process.env.WHOOPSIE_FROM_EMAIL ?? "alerts@whoopsie.dev";
 const RECIPIENTS: Record<string, string> = {
   hi: "hi@whoopsie.dev",
   security: "security@whoopsie.dev",
@@ -73,8 +73,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!isMailConfigured()) {
     // Honest 503 so the modal can fall back to opening `mailto:` with the
     // typed message pre-filled. Better than swallowing the user's message.
     return NextResponse.json(
@@ -101,41 +100,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .filter(Boolean)
     .join("\n");
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [recipient],
-        reply_to: from,
-        subject,
-        text,
-      }),
-    });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as {
-        message?: string;
-      };
-      const reason = data.message ?? `resend ${res.status}`;
-      console.error("[whoopsie] message relay failed:", reason);
-      return NextResponse.json(
-        { error: "relay failed", fallbackTo: recipient },
-        { status: 502 },
-      );
-    }
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[whoopsie] message relay threw:", msg);
+  const result = await sendTransactional({
+    to: recipient,
+    replyTo: from,
+    subject,
+    text,
+    fromName: to === "security" ? "Whoopsie Security" : "Whoopsie Contact",
+  });
+  if (!result.ok) {
+    console.error("[whoopsie] message relay failed:", result.error);
     return NextResponse.json(
       { error: "relay failed", fallbackTo: recipient },
       { status: 502 },
     );
   }
+  return NextResponse.json({ ok: true });
 }
 
 export async function OPTIONS(): Promise<Response> {

@@ -213,8 +213,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // First-failure email alerts. Disabled by default; requires
-    // WHOOPSIE_ALERTS_ENABLED=1 and RESEND_API_KEY. Re-enable only after
-    // disclosing Resend as a sub-processor on /privacy.
+    // WHOOPSIE_ALERTS_ENABLED=1 and BREVO_API_KEY. The mail sub-processor
+    // (Brevo) is already disclosed on /privacy.
     if (hits.length > 0) {
       try {
         const store = await getStore();

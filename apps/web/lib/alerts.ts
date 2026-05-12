@@ -1,28 +1,18 @@
 // Send-on-first-failure email alerts. Currently the only alert kind is
 // `first_failure`: a contact's first detector hit on their project.
 //
-// Disabled by default: requires WHOOPSIE_ALERTS_ENABLED=1 AND RESEND_API_KEY
-// to be set. The feature was disabled when we declined to disclose Resend as
-// a sub-processor on /privacy — re-enable only after the disclosure lands.
+// Disabled by default: requires WHOOPSIE_ALERTS_ENABLED=1 AND BREVO_API_KEY
+// to be set. (See lib/mail.ts for the underlying transactional client.)
+// The feature was disabled when we declined to disclose the mail provider
+// as a sub-processor on /privacy — that disclosure has since landed.
 
 import type { Store } from "./store";
 import type { TraceWithHits } from "./types";
 import { detectorCopy } from "./detector-copy";
+import { isMailConfigured, sendTransactional } from "./mail";
 
-const FROM_ADDRESS =
-  process.env.WHOOPSIE_FROM_EMAIL ?? "alerts@whoopsie.dev";
 const REPLY_TO = process.env.WHOOPSIE_REPLY_TO ?? "hi@whoopsie.dev";
 const KIND = "first_failure";
-
-interface ResendError {
-  message?: string;
-  name?: string;
-}
-
-interface ResendResponse {
-  id?: string;
-  error?: ResendError;
-}
 
 async function sendEmail(opts: {
   to: string;
@@ -30,37 +20,17 @@ async function sendEmail(opts: {
   text: string;
   html: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return { ok: false, error: "RESEND_API_KEY not set" };
-  }
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [opts.to],
-        reply_to: REPLY_TO,
-        subject: opts.subject,
-        text: opts.text,
-        html: opts.html,
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as ResendResponse;
-    if (!res.ok || data.error) {
-      return {
-        ok: false,
-        error: data.error?.message ?? `resend ${res.status}`,
-      };
-    }
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: (err as Error).message };
-  }
+  const result = await sendTransactional({
+    to: opts.to,
+    replyTo: REPLY_TO,
+    subject: opts.subject,
+    text: opts.text,
+    html: opts.html,
+    fromName: "Whoopsie Alerts",
+  });
+  return result.ok
+    ? { ok: true }
+    : { ok: false, error: result.error };
 }
 
 function buildEmail(
@@ -170,7 +140,7 @@ export async function sendFirstFailureAlerts(
     return result;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!isMailConfigured()) {
     result.skippedNoKey = true;
     return result;
   }

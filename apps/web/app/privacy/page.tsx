@@ -120,10 +120,10 @@ export default function PrivacyPage() {
           <p className="mt-3 text-xs text-ink-muted">
             Both forms relay through{" "}
             <a
-              href="https://resend.com"
+              href="https://www.brevo.com"
               className="underline decoration-coral/40 underline-offset-2 hover:text-coral"
             >
-              Resend
+              Brevo
             </a>{" "}
             (our email delivery sub-processor) to the maintainer&apos;s mailbox.
             If the relay is down, the form falls back to opening your mail

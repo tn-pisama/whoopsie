@@ -58,9 +58,9 @@ const CONTACT_PER_IP_PER_MIN = parseInt(
   process.env.WHOOPSIE_CONTACT_PER_IP_PER_MIN ?? "30",
   10,
 );
-// Contact-form messages relay to Resend and into our inbox. Lower ceiling
+// Contact-form messages relay to Brevo and into our inbox. Lower ceiling
 // than the contact-email opt-in (which only writes a Postgres row) because
-// every accepted message is one outbound Resend send + one inbound email
+// every accepted message is one outbound Brevo send + one inbound email
 // for us to read.
 const MESSAGE_PER_IP_PER_MIN = parseInt(
   process.env.WHOOPSIE_MESSAGE_PER_IP_PER_MIN ?? "5",

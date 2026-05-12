@@ -72,9 +72,9 @@ test("MemoryStore.recordAlert is idempotent and case-insensitive", async () => {
 
 test("sendFirstFailureAlerts skips quietly when feature flag off", async () => {
   const originalFlag = process.env.WHOOPSIE_ALERTS_ENABLED;
-  const originalKey = process.env.RESEND_API_KEY;
+  const originalKey = process.env.BREVO_API_KEY;
   delete process.env.WHOOPSIE_ALERTS_ENABLED;
-  process.env.RESEND_API_KEY = "test_key"; // even with key set, flag-off wins
+  process.env.BREVO_API_KEY = "test_key"; // even with key set, flag-off wins
   try {
     const s = new MemoryStore();
     await s.saveContact({
@@ -89,16 +89,16 @@ test("sendFirstFailureAlerts skips quietly when feature flag off", async () => {
     assert.equal(r.sent, 0);
   } finally {
     if (originalFlag !== undefined) process.env.WHOOPSIE_ALERTS_ENABLED = originalFlag;
-    if (originalKey !== undefined) process.env.RESEND_API_KEY = originalKey;
-    else delete process.env.RESEND_API_KEY;
+    if (originalKey !== undefined) process.env.BREVO_API_KEY = originalKey;
+    else delete process.env.BREVO_API_KEY;
   }
 });
 
-test("sendFirstFailureAlerts skips quietly when RESEND_API_KEY unset", async () => {
+test("sendFirstFailureAlerts skips quietly when BREVO_API_KEY unset", async () => {
   const originalFlag = process.env.WHOOPSIE_ALERTS_ENABLED;
-  const originalKey = process.env.RESEND_API_KEY;
+  const originalKey = process.env.BREVO_API_KEY;
   process.env.WHOOPSIE_ALERTS_ENABLED = "1";
-  delete process.env.RESEND_API_KEY;
+  delete process.env.BREVO_API_KEY;
   try {
     const s = new MemoryStore();
     await s.saveContact({
@@ -114,13 +114,13 @@ test("sendFirstFailureAlerts skips quietly when RESEND_API_KEY unset", async () 
   } finally {
     if (originalFlag !== undefined) process.env.WHOOPSIE_ALERTS_ENABLED = originalFlag;
     else delete process.env.WHOOPSIE_ALERTS_ENABLED;
-    if (originalKey !== undefined) process.env.RESEND_API_KEY = originalKey;
+    if (originalKey !== undefined) process.env.BREVO_API_KEY = originalKey;
   }
 });
 
 test("sendFirstFailureAlerts is a no-op when there are no hits", async () => {
   process.env.WHOOPSIE_ALERTS_ENABLED = "1";
-  process.env.RESEND_API_KEY = "test_key";
+  process.env.BREVO_API_KEY = "test_key";
   try {
     const s = new MemoryStore();
     await s.saveContact({
@@ -134,13 +134,13 @@ test("sendFirstFailureAlerts is a no-op when there are no hits", async () => {
     assert.equal(r.sent, 0);
   } finally {
     delete process.env.WHOOPSIE_ALERTS_ENABLED;
-    delete process.env.RESEND_API_KEY;
+    delete process.env.BREVO_API_KEY;
   }
 });
 
-test("sendFirstFailureAlerts records the alert (dedupes future runs) even if Resend fails", async () => {
+test("sendFirstFailureAlerts records the alert (dedupes future runs) even if mail relay fails", async () => {
   process.env.WHOOPSIE_ALERTS_ENABLED = "1";
-  process.env.RESEND_API_KEY = "test_key_that_will_404";
+  process.env.BREVO_API_KEY = "test_key_that_will_404";
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () =>
     new Response(
@@ -164,22 +164,30 @@ test("sendFirstFailureAlerts records the alert (dedupes future runs) even if Res
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.WHOOPSIE_ALERTS_ENABLED;
-    delete process.env.RESEND_API_KEY;
+    delete process.env.BREVO_API_KEY;
   }
 });
 
-test("sendFirstFailureAlerts: happy-path Resend mock", async () => {
+test("sendFirstFailureAlerts: happy-path Brevo mock", async () => {
   process.env.WHOOPSIE_ALERTS_ENABLED = "1";
-  process.env.RESEND_API_KEY = "test_key_ok";
-  const calls: { url: string; body: { to?: string[]; subject?: string } }[] = [];
+  process.env.BREVO_API_KEY = "test_key_ok";
+  interface BrevoCall {
+    url: string;
+    body: {
+      to?: { email: string }[];
+      subject?: string;
+      sender?: { email: string };
+    };
+  }
+  const calls: BrevoCall[] = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: unknown, init?: { body?: string }) => {
     calls.push({
       url: String(input),
       body: JSON.parse(init?.body ?? "{}"),
     });
-    return new Response(JSON.stringify({ id: "email_abc" }), {
-      status: 200,
+    return new Response(JSON.stringify({ messageId: "<abc@brevo>" }), {
+      status: 201,
       headers: { "content-type": "application/json" },
     });
   }) as typeof fetch;
@@ -195,12 +203,12 @@ test("sendFirstFailureAlerts: happy-path Resend mock", async () => {
     assert.equal(r.attempted, 1);
     assert.equal(r.sent, 1);
     assert.equal(calls.length, 1);
-    assert.equal(calls[0]!.url, "https://api.resend.com/emails");
-    assert.deepEqual(calls[0]!.body.to, ["alice@example.com"]);
+    assert.equal(calls[0]!.url, "https://api.brevo.com/v3/smtp/email");
+    assert.deepEqual(calls[0]!.body.to, [{ email: "alice@example.com" }]);
     assert.match(calls[0]!.body.subject ?? "", /loop/i);
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.WHOOPSIE_ALERTS_ENABLED;
-    delete process.env.RESEND_API_KEY;
+    delete process.env.BREVO_API_KEY;
   }
 });

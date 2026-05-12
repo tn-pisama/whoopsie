@@ -3,11 +3,11 @@
 // In-page contact modal. Opened from /privacy + /terms instead of a bare
 // `mailto:` link — vibe-coders on mobile often have no configured mail app
 // and the link does nothing. The modal posts to /api/v1/message which
-// relays through Resend to hi@whoopsie.dev or security@whoopsie.dev (both
+// relays through Brevo to hi@whoopsie.dev or security@whoopsie.dev (both
 // forwarded to tuomo@pisama.ai by Cloudflare Email Routing).
 //
-// Graceful failure: if the relay returns 503 (no RESEND_API_KEY set) or
-// 502 (Resend itself errored), the modal falls back to opening
+// Graceful failure: if the relay returns 503 (no BREVO_API_KEY set) or
+// 502 (Brevo itself errored), the modal falls back to opening
 // `mailto:<recipient>?subject=...&body=...` with the typed content
 // preserved. The user never loses what they wrote.
 
@@ -283,7 +283,7 @@ export function ContactModal({
             </div>
 
             <p className="text-[11px] text-ink-muted">
-              Sent via Resend (our email delivery provider). Your message and
+              Sent via Brevo (our email delivery provider). Your message and
               email address travel through their servers. See{" "}
               <a href="/privacy" className="underline hover:text-coral">
                 /privacy
