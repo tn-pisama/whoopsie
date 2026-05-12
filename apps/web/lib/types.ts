@@ -17,6 +17,12 @@ export interface TraceEvent {
   model: string;
   prompt?: string;
   completion?: string;
+  /**
+   * Reasoning / chain-of-thought content emitted by models that expose it
+   * (o1, Claude extended thinking, Gemini thinking, etc.). Goes through the
+   * same redact pipeline as `prompt` / `completion`.
+   */
+  reasoning?: string;
   toolCalls: ToolCall[];
   inputTokens?: number;
   outputTokens?: number;

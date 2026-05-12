@@ -226,6 +226,10 @@ function EventDetail({ item }: { item: TraceWithHits }) {
     () => truncate(event.completion, 800),
     [event.completion],
   );
+  const reasoningText = useMemo(
+    () => truncate(event.reasoning, 1200),
+    [event.reasoning],
+  );
 
   return (
     <div className="space-y-4 border-t border-line px-4 py-4 text-sm">
@@ -272,6 +276,11 @@ function EventDetail({ item }: { item: TraceWithHits }) {
       {event.prompt && (
         <Section label="prompt">
           <pre className={`${GeistMono.className} whitespace-pre-wrap text-[12px] leading-5`}>{promptText}</pre>
+        </Section>
+      )}
+      {event.reasoning && (
+        <Section label="reasoning">
+          <pre className={`${GeistMono.className} whitespace-pre-wrap text-[12px] leading-5 text-ink-muted`}>{reasoningText}</pre>
         </Section>
       )}
       {event.completion && (

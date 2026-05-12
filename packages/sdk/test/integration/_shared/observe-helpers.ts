@@ -72,6 +72,57 @@ export function mockTextModel(text: string, modelId = "mock"): LanguageModelV3 {
   };
 }
 
+/**
+ * Mock model that emits reasoning content alongside the final text. Used to
+ * verify the middleware captures `reasoning-delta` stream parts and
+ * `type: "reasoning"` content parts from doGenerate. The Vercel AI SDK v6
+ * spec for reasoning is documented in
+ * node_modules/@ai-sdk/provider/dist/index.d.ts (LanguageModelV3ReasoningPart
+ * and the reasoning-start / reasoning-delta / reasoning-end stream parts).
+ */
+export function mockReasoningModel(
+  reasoning: string,
+  text: string,
+  modelId = "mock-reasoning",
+): LanguageModelV3 {
+  return {
+    specificationVersion: "v3",
+    provider: "mock",
+    modelId,
+    supportedUrls: {},
+    async doGenerate() {
+      return {
+        content: [
+          { type: "reasoning", text: reasoning },
+          { type: "text", text },
+        ],
+        finishReason: "stop",
+        usage: { inputTokens: 5, outputTokens: 3, totalTokens: 8 },
+        warnings: [],
+      };
+    },
+    async doStream() {
+      const stream = simulateReadableStream({
+        chunks: [
+          { type: "stream-start", warnings: [] },
+          { type: "reasoning-start", id: "r0" },
+          { type: "reasoning-delta", id: "r0", delta: reasoning },
+          { type: "reasoning-end", id: "r0" },
+          { type: "text-start", id: "t0" },
+          { type: "text-delta", id: "t0", delta: text },
+          { type: "text-end", id: "t0" },
+          {
+            type: "finish",
+            finishReason: "stop",
+            usage: { inputTokens: 5, outputTokens: 3, totalTokens: 8 },
+          },
+        ] as LanguageModelV3StreamPart[],
+      });
+      return { stream, warnings: [] };
+    },
+  };
+}
+
 export function failingModel(modelId = "mock-failing"): LanguageModelV3 {
   return {
     specificationVersion: "v3",

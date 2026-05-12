@@ -1,6 +1,6 @@
 {
   "name": "@whoopsie/sdk",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "See your AI app's failures live. Vercel AI SDK middleware that catches loops, hallucinations, and cost spikes.",
   "type": "module",
   "main": "./dist/index.js",

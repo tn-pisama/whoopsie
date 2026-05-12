@@ -292,6 +292,7 @@ function buildMiddleware(
 
       const collected: StreamCollector = {
         text: "",
+        reasoning: "",
         toolCalls: [],
         usage: undefined,
         finishReason: undefined,
@@ -333,6 +334,8 @@ function buildMiddleware(
 
 interface StreamCollector {
   text: string;
+  /** Concatenated reasoning text from `reasoning-delta` stream parts. */
+  reasoning: string;
   toolCalls: ToolCall[];
   usage: UsageLike | undefined;
   finishReason: string | undefined;
@@ -341,6 +344,10 @@ interface StreamCollector {
 function collectChunk(chunk: StreamPartLike, c: StreamCollector): void {
   if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
     c.text += chunk.delta;
+    return;
+  }
+  if (chunk.type === "reasoning-delta" && typeof chunk.delta === "string") {
+    c.reasoning += chunk.delta;
     return;
   }
   if (chunk.type === "tool-call") {
@@ -387,6 +394,16 @@ function buildFromGenerate(
     .filter((c): c is ContentPartLike & { text: string } => c.type === "text" && typeof c.text === "string")
     .map((c) => c.text)
     .join("");
+  // Reasoning parts (LanguageModelV3ReasoningPart): { type: "reasoning",
+  // text: string }. Emitted by providers that expose chain-of-thought —
+  // o1, Claude extended thinking, Gemini thinking, etc.
+  const reasoning = (result.content ?? [])
+    .filter(
+      (c): c is ContentPartLike & { text: string } =>
+        c.type === "reasoning" && typeof c.text === "string",
+    )
+    .map((c) => c.text)
+    .join("");
   const toolCalls: ToolCall[] = (result.content ?? [])
     .filter((c) => c.type === "tool-call")
     .map((c) => ({
@@ -405,6 +422,7 @@ function buildFromGenerate(
     model: model.modelId ?? "",
     prompt: extractPromptStr(rest.params, rest.redactMode),
     completion: text ? redactObject(text, rest.redactMode) : undefined,
+    reasoning: reasoning ? redactObject(reasoning, rest.redactMode) : undefined,
     toolCalls,
     inputTokens: result.usage?.inputTokens?.total,
     outputTokens: result.usage?.outputTokens?.total,
@@ -427,6 +445,9 @@ function buildFromStream(
     prompt: extractPromptStr(rest.params, rest.redactMode),
     completion: collected.text
       ? redactObject(collected.text, rest.redactMode)
+      : undefined,
+    reasoning: collected.reasoning
+      ? redactObject(collected.reasoning, rest.redactMode)
       : undefined,
     toolCalls: collected.toolCalls.map((tc) => ({
       ...tc,
