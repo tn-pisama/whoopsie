@@ -104,6 +104,42 @@ test("Replit platform includes the Replit framework note (proxy + deployment sec
   );
 });
 
+test("Cursor platform includes the Cursor framework note (Composer/Agent + install + env-var write)", () => {
+  // Simulated walkthrough on 2026-05-12 found Cursor's Agent does not
+  // auto-install packages or write env files unless explicitly asked.
+  // Three load-bearing instructions must survive in the prompt:
+  //   1. Use Composer/Agent mode (⌘+I), not Ask (⌘+L)
+  //   2. Detect package manager from lockfile and install the SDK
+  //   3. Write WHOOPSIE_PROJECT_ID directly to .env.local
+  const cursor = getPlatform("cursor")!;
+  const prompt = cursor.template("ws_test_12345");
+  assert.match(
+    prompt,
+    /Composer ?\/ ?Agent mode/,
+    "Cursor prompt must recommend Composer/Agent mode (⌘+I), not Ask (⌘+L)",
+  );
+  assert.match(
+    prompt,
+    /pnpm-lock\.yaml/,
+    "Cursor prompt must teach package-manager detection from the lockfile",
+  );
+  assert.match(
+    prompt,
+    /pnpm add @whoopsie\/sdk/,
+    "Cursor prompt must tell the Agent to install the SDK in the integrated terminal",
+  );
+  assert.match(
+    prompt,
+    /Write `WHOOPSIE_PROJECT_ID=ws_…` directly into `\.env\.local`/,
+    "Cursor prompt must tell the Agent to write WHOOPSIE_PROJECT_ID into .env.local itself",
+  );
+  assert.match(
+    prompt,
+    /restart the dev server/,
+    "Cursor prompt must tell the user to restart the dev server so the new env var loads",
+  );
+});
+
 test("no platform's template teaches the deprecated toDataStreamResponse() pattern", () => {
   for (const p of platforms) {
     const out = p.template("ws_test_12345");

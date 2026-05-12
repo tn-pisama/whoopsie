@@ -58,8 +58,12 @@ export default async function InstallPage({
           there&apos;s a faster path further down).
         </p>
         <p className="mt-3 max-w-xl text-sm text-ink-muted">
-          The prompt defaults to metadata-only mode (zero prompt / completion
-          text leaves your app). Full data-handling story:{" "}
+          The prompt defaults to <span className="font-mono">standard</span> mode:
+          full prompts, completions, tool args, and reasoning text — with emails,
+          phone numbers, SSNs, card-shaped numbers, JWTs, and provider API keys
+          regex-scrubbed before egress, then scrubbed again server-side. Need
+          zero text off-machine? Flip to <span className="font-mono">redact:&nbsp;&quot;metadata-only&quot;</span>.
+          Full data-handling story:{" "}
           <a href="/privacy" className="underline decoration-coral underline-offset-2 hover:text-ink">
             /privacy
           </a>
