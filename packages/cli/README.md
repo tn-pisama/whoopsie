@@ -44,15 +44,15 @@ Exit code is 0 on success, 1 on any failure (no project id, ingest 5xx, network 
 
 ### `whoopsie mcp`
 
-Runs an MCP server over stdio so Cursor / Claude Code / any MCP client can read your project's failures inline in your editor. Three tools:
+Runs an MCP server over stdio so any MCP-compatible AI assistant can read your project's failures inline. Three tools:
 
 - `get_recent_failures(limit?)` — recent traces that fired any detector
 - `get_recent_traces(limit?)` — recent traces, regardless of failure status
 - `get_trace(traceId)` — full prompt, completion, tool calls, detector hits for one trace
 
-#### Cursor
+#### Connecting an MCP client
 
-In `~/.cursor/mcp.json` (or your project's `.cursor/mcp.json`):
+Add this to your MCP client's server config (path varies by client — consult your client's docs):
 
 ```json
 {
@@ -66,25 +66,7 @@ In `~/.cursor/mcp.json` (or your project's `.cursor/mcp.json`):
 }
 ```
 
-Then in Cursor's chat: *"what did my AI agent break in the last hour?"* — the AI will call `get_recent_failures` and answer with real data from your `whoopsie.dev` dashboard.
-
-#### Claude Code
-
-```bash
-claude mcp add whoopsie -e WHOOPSIE_PROJECT_ID=ws_yourprojectid -- npx -y @whoopsie/cli mcp
-```
-
-Or add to `~/.claude/mcp_servers.json` directly:
-
-```json
-{
-  "whoopsie": {
-    "command": "npx",
-    "args": ["-y", "@whoopsie/cli", "mcp"],
-    "env": { "WHOOPSIE_PROJECT_ID": "ws_yourprojectid" }
-  }
-}
-```
+Then ask your assistant something like *"what did my AI agent break in the last hour?"* — it will call `get_recent_failures` and answer with real data from your `whoopsie.dev` dashboard.
 
 Flags:
 

@@ -21,8 +21,14 @@ export default async function InstallPage({
     typeof params.id === "string" && /^ws_[A-Za-z0-9]+$/.test(params.id)
       ? params.id
       : newProjectId();
+  // Fall back to lovable for any unknown or removed slug (e.g. legacy
+  // /install?platform=cursor URLs after Cursor was dropped 2026-05-12).
+  const requested =
+    typeof params.platform === "string" ? params.platform : null;
   const initial =
-    typeof params.platform === "string" ? params.platform : "cursor";
+    requested && platforms.some((p) => p.slug === requested)
+      ? requested
+      : "lovable";
 
   const platformsForServerId = platforms.map((p) => ({
     slug: p.slug,

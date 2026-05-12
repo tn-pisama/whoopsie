@@ -54,15 +54,6 @@ For each platform listed below, do the full flow. Record results in the log tabl
 7. Replit's server logs are visible in the console pane. Look for `[whoopsie] enabled`.
 8. Check `/live/<project-id>`.
 
-### Cursor (desktop app)
-
-1. Open Cursor on a fresh Next.js + AI SDK project (the existing `whoopsie-chat-example` repo if there is one; otherwise `npx create-next-app` and add an AI SDK route).
-2. `⌘+L` → paste the Cursor platform prompt.
-3. Watch Cursor's Composer apply the diff. Accept changes.
-4. Open a terminal in Cursor: `npm install` if needed, then `npx @whoopsie/cli verify`.
-5. `pnpm dev` (or `npm run dev`). Hit the chat route in a browser.
-6. Server logs should show `[whoopsie] enabled`. Dashboard should receive a trace.
-
 ### Bolt (currently marked **untested**)
 
 Skipped from regular rotation. If/when Bolt is brought back into scope:
@@ -80,7 +71,6 @@ Update this table each run. Commit alongside any prompt or SDK changes that trig
 | 2026-05-10 | 0.0.2 | n/a | Lovable | ✓ | unverified | ✓ | n/a | ✗ silent | Chat returned real completion; zero traces. TanStack Start framework. Lovable-specific prompt added in 0.2.0 release. |
 | 2026-05-10 | 0.0.2 | n/a | Replit | ✓ planning | unverified | partial | n/a | ✗ hang | Chat never returned a response. Root cause undiagnosed. |
 | 2026-05-10 | 0.0.2 | n/a | Bolt | ✓ | partial | n/a | n/a | ✗ paywall | Stopped at token paywall mid-build. |
-| 2026-05-10 | n/a | n/a | Cursor | not tested | — | — | — | — | Desktop app, no browser automation. Needs manual user. |
 | 2026-05-10 | 0.3.0 | 0.2.0 | Lovable | **✓** (migration from old wrap) | **✓** (`observe(openai("gpt-4o-mini"), { redact: "metadata-only" })` at correct streamText line in `src/routes/api/chat.ts`) | ✓ (per Lovable AI) | not run (no terminal) | **✗ silent (no trace)** | **Critical finding:** even with perfect AI execution + correct code in the correct file, traces don't fire on Lovable. Chat returns real OpenAI completion ("2 + 2 equals 4."). Same silent no-op as first test. Suggests env var not propagating to runtime OR `ai` version mismatch OR Lovable preview egress blocked. Needs server-log access (UI doesn't expose them) or runtime probe to isolate. |
 | 2026-05-10 | 0.3.0 | 0.2.0 | v0 | **✓** (migration from typo'd wrap) | **✓** (`Line 11: Changed whoopsieMiddleware({...})(openai(...)) to observe(openai("gpt-4o-mini"), { redact: "metadata-only" })`) | ✓ (already set in Vars) | not run | not tested | v0 hit "Maximum context limit reached" before testing. Sandbox subsequently died (410). Migration code is correct; runtime untested. **Sub-finding:** install prompt may be too long for v0's starter-quota context window. |
 | 2026-05-10 | 0.3.0 | 0.2.0 | Replit | **✓** (Replit AI proactively diagnosed `ai@^6` peer-dep mismatch in its earlier response — "if whoopsieMiddleware throws at runtime, that's the likely cause") | pending build | ✓ | not run | not tested | **Major finding:** Replit AI identified the root cause of the original "hang" was a peer dependency mismatch (`ai@4.x` installed, `@whoopsie/sdk` needs `ai@^6`). This explains the silent failures and is fixable in our SDK by checking the `ai` version at `observe()` construction. Workflow rebuild took longer than the test window. |
@@ -95,6 +85,6 @@ Update this table each run. Commit alongside any prompt or SDK changes that trig
 
 ## Cadence
 
-- **Before every SDK release**: full pass, all in-scope platforms (v0, Lovable, Replit, Cursor). Log results.
+- **Before every SDK release**: full pass, all in-scope platforms (Lovable, Replit, Bolt, v0). Log results.
 - **Monthly**: same, plus check `/install` copy is still accurate.
 - **Ad hoc**: when a user reports a regression, do a targeted test of just that platform first.

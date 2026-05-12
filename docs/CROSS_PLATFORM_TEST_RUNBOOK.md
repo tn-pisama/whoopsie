@@ -1,6 +1,6 @@
 # Cross-Platform Integration Test Runbook
 
-The script for a fresh-session Playwright run that verifies whoopsie's install path works on v0, Lovable, and Replit. Cursor is desktop-only and gets a manual user test; Bolt is out of scope (dropped 2026-05-10).
+The script for a fresh-session Playwright run that verifies whoopsie's install path works on Lovable, Replit, Bolt, and v0.
 
 This runbook exists because the previous test (2026-05-10) ran *before* most of the SDK + CLI + install-prompt fixes shipped. Re-running it converts "likely fixed" status to "confirmed working."
 
@@ -27,9 +27,9 @@ The previous session's transcript has a leaked OpenAI key in it. The harness blo
 
 ## Session kickoff
 
-In the fresh Claude Code session, paste this:
+In a fresh session, paste this:
 
-> Run the cross-platform integration test per `docs/CROSS_PLATFORM_TEST_RUNBOOK.md`. Project ID for this run: `ws_<paste-from-install-page>`. I've already set `OPENAI_API_KEY` in v0/Lovable/Replit secrets. Use Claude in Chrome MCP, my current Chrome session has all three platforms logged in. Test platforms in this order: v0, Lovable, Replit. Cursor is skipped (desktop). Report results in the format described in the runbook.
+> Run the cross-platform integration test per `docs/CROSS_PLATFORM_TEST_RUNBOOK.md`. Project ID for this run: `ws_<paste-from-install-page>`. I've already set `OPENAI_API_KEY` in Lovable/Replit/Bolt/v0 secrets. Use Claude in Chrome MCP — my current Chrome session has all four platforms logged in. Test platforms in this order: Lovable, Replit, Bolt, v0. Report results in the format described in the runbook.
 
 ## Per-platform test flow
 

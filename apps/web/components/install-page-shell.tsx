@@ -113,7 +113,7 @@ pnpm add @whoopsie/sdk
           Why this works (when it works)
         </h2>
         <p className="mt-4 text-ink-muted">
-          Lovable, Replit, Bolt, Cursor, and v0 all let you talk to an AI that
+          Lovable, Replit, Bolt, and v0 all let you talk to an AI that
           edits your code. The prompt above tells that AI exactly what to do:
           install the SDK, find the model call, wrap it. The wrap is one line of
           TypeScript that catches loops, hallucinations, and cost spikes and

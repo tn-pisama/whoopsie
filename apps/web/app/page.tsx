@@ -4,7 +4,6 @@ const PLATFORMS = [
   { slug: "lovable", name: "Lovable" },
   { slug: "replit", name: "Replit" },
   { slug: "bolt", name: "Bolt" },
-  { slug: "cursor", name: "Cursor" },
   { slug: "v0", name: "v0" },
 ] as const;
 
@@ -14,9 +13,10 @@ import { observe } from "@whoopsie/sdk";
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
+  const modelMessages = await convertToModelMessages(messages);
   const result = streamText({
     model: observe(openai("gpt-4o"), { redact: "standard" }),
-    messages: convertToModelMessages(messages),
+    messages: modelMessages,
   });
   return result.toUIMessageStreamResponse();
 }`;
@@ -117,7 +117,7 @@ export default function LandingPage() {
           <Step
             n={1}
             title="Pick where you build"
-            body="Lovable, Replit, Bolt, Cursor, v0 — all supported. We give you a prompt tailored to that tool."
+            body="Lovable, Replit, Bolt, v0 — all supported. We give you a prompt tailored to that tool."
           />
           <Step
             n={2}
@@ -216,7 +216,7 @@ export default function LandingPage() {
             get your install prompt →
           </a>
           <span className="text-sm text-ink-muted">
-            Paste into Lovable, Replit, Bolt, Cursor, or v0. 60 seconds.
+            Paste into Lovable, Replit, Bolt, or v0. 60 seconds.
           </span>
         </div>
       </section>

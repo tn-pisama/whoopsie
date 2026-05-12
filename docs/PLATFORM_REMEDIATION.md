@@ -16,7 +16,7 @@ The `@whoopsie/sdk` 0.2.0 release added loud-by-default logging; 0.3.0 added par
 
 ### Run `npx @whoopsie/cli verify` (any platform with a terminal)
 
-If the platform offers a terminal (Replit, Cursor, occasionally others), run `npx -y @whoopsie/cli@0.2.0 verify`. It's an SDK-independent round-trip check.
+If the platform offers a terminal (Replit, occasionally others), run `npx -y @whoopsie/cli@0.2.0 verify`. It's an SDK-independent round-trip check.
 
 Outcome tells you which layer is broken:
 
@@ -150,26 +150,6 @@ Replit Agent sometimes generates Express routes, sometimes Next.js routes, depen
 After `kill 1`, the workflow takes ~5s to come back. If the user sends a chat too early, they'll get "service unavailable." Re-try after 10s.
 
 ---
-
-## Cursor (desktop)
-
-Cursor isn't browser-drivable, so debug requires a human. The remediation paths are simpler because the user has direct terminal access:
-
-### If the wrap is wrong
-
-Open `app/api/chat/route.ts` in Cursor. Verify it imports `observe` from `@whoopsie/sdk` and uses it. If not, paste the install prompt back into Composer and ask it to fix.
-
-### If `WHOOPSIE_PROJECT_ID` isn't set
-
-`cat .env.local` should show `WHOOPSIE_PROJECT_ID=ws_xxx`. If missing, paste it. Restart `pnpm dev`.
-
-### If `verify` fails with "Could not reach …"
-
-Network egress from your local dev machine to `whoopsie.dev` is blocked. Most likely a corporate firewall or VPN. Try `curl https://whoopsie.dev/api/v1/spans -X OPTIONS -i` to confirm.
-
-### If `verify` passes but real chat doesn't
-
-The wrap is on a different model than `streamText` is using. Open the route file and follow the model expression carefully: the model `streamText({ model: ... })` receives should be the one `observe()` returns.
 
 ---
 

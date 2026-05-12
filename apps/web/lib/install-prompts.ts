@@ -90,9 +90,6 @@ const LOVABLE_FRAMEWORK_NOTE =
 const REPLIT_FRAMEWORK_NOTE =
   "Important Replit gotchas (verified end-to-end 2026-05-10): (1) The `.replit` config sometimes routes `/api/*` to a separate Express server on port 8080 instead of the Next.js dev server. If a public POST to `/api/chat` returns an Express-style 404 (`Cannot POST /api/chat`) while `/` returns a Next.js page, the proxy needs to be reconfigured so Next.js owns `/api/*` — otherwise the chat route and the observe() wrap never execute. (2) When you click **Publish** to deploy to `.replit.app`, the dev Workspace Secrets do **not** carry over to the Autoscale Deployment automatically. Open the deployment's Manage tab and add `OPENAI_API_KEY` and `WHOOPSIE_PROJECT_ID` (any other `process.env.*` the chat route reads) to the deployment-side secrets before testing the published URL, or `/api/chat` will return HTTP 500. (3) If the build fails at `next build` with a TypeScript error on `useChat({ api: \"/api/chat\" })`, drop the `api` option — it doesn't exist in `@ai-sdk/react` v3 (which ships with ai@6); the default is `/api/chat` already.";
 
-const CURSOR_FRAMEWORK_NOTE =
-  "Important Cursor gotchas (verified end-to-end 2026-05-12): (1) Use **Composer / Agent mode (⌘+I)**, not Ask mode (⌘+L). Ask is read-only Q&A about the codebase; Agent edits files and can run terminal commands — both are needed. (2) **Install the package before adding the import.** Detect the project's package manager from the lockfile in the repo root and run the matching install in the integrated terminal: `pnpm add @whoopsie/sdk` if `pnpm-lock.yaml` is present, `npm install @whoopsie/sdk` if `package-lock.json`, `yarn add @whoopsie/sdk` if `yarn.lock`, or `bun add @whoopsie/sdk` if `bun.lockb` / `bun.lock`. Don't skip this — the wrap won't typecheck or run without the dependency on disk. (3) **Write `WHOOPSIE_PROJECT_ID=ws_…` directly into `.env.local`** yourself (or `.env` if that's the convention this project uses). Don't ask me to do it manually — you have edit access to that file, and the Next.js dev server reads it on next start. (4) Use `@codebase` (or `⌘+Shift+F`) to find `streamText` / `generateText` — don't guess at file paths. (5) After the wrap is in place and the env var is written, ask me to restart the dev server (`pnpm dev` / `npm run dev` / `yarn dev` / `bun dev`) so the new env var loads — Next.js does not hot-reload `.env.local`.";
-
 export const platforms: PlatformPrompt[] = [
   {
     slug: "lovable",
@@ -137,17 +134,6 @@ export const platforms: PlatformPrompt[] = [
     // Ug0bt4bfSnHD8WMIaOBml, 18/5 tokens, no error). Once OPENAI_API_KEY is
     // in .env the chat returns real gpt-4o-mini responses.
     template: (id) => baseInstructions(id, "the .env file at the project root"),
-  },
-  {
-    slug: "cursor",
-    name: "Cursor",
-    blurb:
-      "Open Cursor in your project, hit ⌘+I to open Composer/Agent mode, paste the prompt below.",
-    whereToPaste: "Cursor's Composer/Agent chat (⌘+I — not the read-only Ask panel on ⌘+L)",
-    envVarLocation: "your `.env.local` file",
-    frameworkNote: CURSOR_FRAMEWORK_NOTE,
-    template: (id) =>
-      baseInstructions(id, "your `.env.local` file", CURSOR_FRAMEWORK_NOTE),
   },
   {
     slug: "v0",

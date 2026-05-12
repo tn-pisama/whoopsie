@@ -11,7 +11,7 @@ Anchors used everywhere:
 - npm: https://www.npmjs.com/package/@whoopsie/sdk
 
 Pitch in one sentence: *"See when your AI app loops, hallucinates, or burns
-tokens — paste one prompt into Lovable / Cursor / Replit and it wires
+tokens — paste one prompt into Lovable / Replit / Bolt / v0 and it wires
 itself up."*
 
 ---
@@ -48,7 +48,7 @@ Or click one of the "trigger this kind of failure" buttons to see what
 each detector looks like without burning model tokens.
 
 Install path is for vibe coders who don't run npx — paste a prompt into
-Lovable / Cursor / Replit / Bolt / v0 chat and the AI wires it up. I
+Lovable / Replit / Bolt / v0 chat and the AI wires it up. I
 made the prompt deliberately injection-shaped on the first try; Lovable
 correctly refused. The version live now is conversational, points at
 the public npm + GitHub URLs, and tells the AI to skip the install if
@@ -86,7 +86,7 @@ Fair question. Three differences I'd flag:
    tokens in one call.
 
 2. The install path is for people who don't run npx. The /install page
-   gives you a prompt to paste into Lovable / Cursor / Replit and the
+   gives you a prompt to paste into Lovable / Replit / Bolt / v0 and the
    AI wires it up.
 
 3. Plain-English. "Made something up" / "Stuck in a loop" instead of
@@ -111,7 +111,7 @@ it catches when your AI app loops, hallucinates, or burns through tokens
 
 one wrap on your Vercel AI SDK call. seven detectors. live dashboard.
 
-most fun part: paste a prompt into Lovable or Cursor and your AI builder
+most fun part: paste a prompt into Lovable or Bolt and your AI builder
 wires it up for you. no terminal needed.
 
 (thread ↓)
@@ -137,7 +137,7 @@ tokens.
 ```
 install for vibe coders:
 
-1. open whoopsie.dev/install, pick lovable / cursor / replit / bolt / v0
+1. open whoopsie.dev/install, pick lovable / replit / bolt / v0
 2. copy the prompt (already has your project id baked in)
 3. paste it into your AI builder's chat
 4. it edits the code, you watch the dashboard

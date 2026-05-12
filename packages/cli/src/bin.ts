@@ -28,7 +28,7 @@ program
 program
   .command("mcp")
   .description(
-    "Run an MCP server over stdio so Cursor/Claude Code can read your project's failures.",
+    "Run an MCP server over stdio so any MCP-compatible AI assistant can read your project's failures.",
   )
   .option(
     "-p, --project-id <id>",

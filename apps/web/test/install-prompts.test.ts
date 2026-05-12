@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { platforms, getPlatform } from "../lib/install-prompts";
 
 test("base instructions show observe() as the example, not wrapLanguageModel({...})", () => {
-  const sample = getPlatform("cursor")!.template("ws_test_12345");
+  const sample = getPlatform("v0")!.template("ws_test_12345");
   assert.match(sample, /observe\(openai\(/);
   assert.match(sample, /@whoopsie\/sdk/);
   // The prompt MAY mention wrapLanguageModel in "do not" lines, but must
@@ -45,7 +45,7 @@ test("all v1-supported platforms are verified end-to-end (no `untested` flag)", 
   // Bolt was the last platform marked untested. Verified end-to-end on
   // 2026-05-11 with a clean trace (Ug0bt4bfSnHD8WMIaOBml, no error). All five
   // v1 platforms now ship without the untested badge.
-  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+  for (const slug of ["lovable", "replit", "bolt", "v0"]) {
     const p = getPlatform(slug)!;
     assert.notEqual(
       p.untested,
@@ -83,7 +83,7 @@ test("base instructions teach the ai@6 migration gotchas (convertToModelMessages
   // install prompt has to call these out or AI agents reconstruct the v5
   // pattern and the chat 500s. See CHANGELOG.md SDK 0.4.x section for
   // the rationale.
-  const sample = getPlatform("cursor")!.template("ws_test_12345");
+  const sample = getPlatform("v0")!.template("ws_test_12345");
   assert.match(sample, /toUIMessageStreamResponse/);
   assert.match(sample, /convertToModelMessages/);
   assert.match(sample, /sendMessage/);
@@ -95,7 +95,7 @@ test("base instructions teach the async convertToModelMessages gotcha (ai@6.0.x 
   // pre-6.0.x synchronous signature: `messages: convertToModelMessages(messages)`.
   // Real signature in 6.0.180 is async — must be awaited. The prompt now
   // shows the awaited pattern; lock it so future drift doesn't regress.
-  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+  for (const slug of ["lovable", "replit", "bolt", "v0"]) {
     const prompt = getPlatform(slug)!.template("ws_test_12345");
     assert.match(
       prompt,
@@ -110,7 +110,7 @@ test("base instructions teach the LanguageModelV2 → V3 upgrade for @ai-sdk/ope
   // `pnpm add @ai-sdk/openai` against an older lockfile pulled @ai-sdk/openai@^2
   // (LanguageModelV2), and @whoopsie/sdk >= 0.5 expects V3. The prompt has
   // to warn so AI agents upgrade the provider as part of the install.
-  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+  for (const slug of ["lovable", "replit", "bolt", "v0"]) {
     const prompt = getPlatform(slug)!.template("ws_test_12345");
     assert.match(
       prompt,
@@ -131,7 +131,7 @@ test("base instructions do not teach the deprecated SYNC convertToModelMessages 
   // any whitespace between `messages:` and the call, but the immediate
   // bareword `convertToModelMessages` (without `await`) in the messages slot
   // of a streamText call is the regression we're guarding against.
-  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+  for (const slug of ["lovable", "replit", "bolt", "v0"]) {
     const prompt = getPlatform(slug)!.template("ws_test_12345");
     assert.doesNotMatch(
       prompt,
@@ -156,40 +156,15 @@ test("Replit platform includes the Replit framework note (proxy + deployment sec
   );
 });
 
-test("Cursor platform includes the Cursor framework note (Composer/Agent + install + env-var write)", () => {
-  // Simulated walkthrough on 2026-05-12 found Cursor's Agent does not
-  // auto-install packages or write env files unless explicitly asked.
-  // Three load-bearing instructions must survive in the prompt:
-  //   1. Use Composer/Agent mode (⌘+I), not Ask (⌘+L)
-  //   2. Detect package manager from lockfile and install the SDK
-  //   3. Write WHOOPSIE_PROJECT_ID directly to .env.local
-  const cursor = getPlatform("cursor")!;
-  const prompt = cursor.template("ws_test_12345");
-  assert.match(
-    prompt,
-    /Composer ?\/ ?Agent mode/,
-    "Cursor prompt must recommend Composer/Agent mode (⌘+I), not Ask (⌘+L)",
-  );
-  assert.match(
-    prompt,
-    /pnpm-lock\.yaml/,
-    "Cursor prompt must teach package-manager detection from the lockfile",
-  );
-  assert.match(
-    prompt,
-    /pnpm add @whoopsie\/sdk/,
-    "Cursor prompt must tell the Agent to install the SDK in the integrated terminal",
-  );
-  assert.match(
-    prompt,
-    /Write `WHOOPSIE_PROJECT_ID=ws_…` directly into `\.env\.local`/,
-    "Cursor prompt must tell the Agent to write WHOOPSIE_PROJECT_ID into .env.local itself",
-  );
-  assert.match(
-    prompt,
-    /restart the dev server/,
-    "Cursor prompt must tell the user to restart the dev server so the new env var loads",
-  );
+test("Cursor is no longer a supported platform (intentionally dropped 2026-05-12)", () => {
+  // Cursor cloud Agents are paywalled and Cursor.app desktop is not
+  // browser-drivable from our test fleet — so the install path could
+  // never be verified end-to-end the way Lovable/Replit/Bolt/v0 are.
+  // Dropping the platform avoids shipping a prompt we can't keep working.
+  assert.equal(getPlatform("cursor"), undefined);
+  for (const p of platforms) {
+    assert.notEqual(p.slug, "cursor", `platforms[] still contains cursor entry`);
+  }
 });
 
 test("no platform's template teaches the deprecated toDataStreamResponse() pattern", () => {
@@ -211,7 +186,7 @@ test("base instructions recommend redact: 'standard' (not 'metadata-only')", () 
   // standard (full prompt/completion/tool args/reasoning with PII scrub).
   // The install prompts must teach the new posture; metadata-only stays
   // available as an opt-in but is no longer the headline recommendation.
-  const sample = getPlatform("cursor")!.template("ws_test_12345");
+  const sample = getPlatform("v0")!.template("ws_test_12345");
   assert.match(
     sample,
     /observe\(openai\("gpt-4o"\), \{ redact: "standard" \}\)/,

@@ -5,8 +5,8 @@
 //   get_recent_traces     list the most recent traces (with or without hits)
 //   get_trace             fetch one specific trace by traceId
 //
-// Wire it into Cursor / Claude Code's MCP config and the AI in your editor
-// can answer "what did my agent break this morning?" against real data.
+// Wire it into any MCP-compatible AI assistant's server config and the
+// AI can answer "what did my agent break this morning?" against real data.
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
