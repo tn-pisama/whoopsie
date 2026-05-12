@@ -15,7 +15,7 @@ import { observe } from "@whoopsie/sdk";
 export async function POST(req: Request) {
   const { messages } = await req.json();
   const result = streamText({
-    model: observe(openai("gpt-4o"), { redact: "metadata-only" }),
+    model: observe(openai("gpt-4o"), { redact: "standard" }),
     messages: convertToModelMessages(messages),
   });
   return result.toUIMessageStreamResponse();
@@ -85,7 +85,7 @@ export default function LandingPage() {
         <a href="/privacy" className="underline decoration-coral underline-offset-2 hover:text-ink">
           /privacy
         </a>
-        ; metadata-only mode ships zero prompt or completion text.
+        ; PII is scrubbed in the SDK before any bytes leave your app.
       </section>
 
       <section className="grid gap-10 border-t border-line py-16 sm:grid-cols-3">
@@ -98,10 +98,11 @@ export default function LandingPage() {
           body="Copy a prompt. Paste it into your AI builder's chat. Your AI edits the code for you. You watch the dashboard."
         />
         <Feature
-          title="Send only metadata if you want"
+          title="PII scrubbed before bytes leave your app"
           body={
             <>
-              Default mode redacts emails, phones, cards, JWTs, and provider API keys in the SDK before they leave your app. Metadata-only mode ships token counts and detector verdicts only — zero prompt or completion text.{" "}
+              Default <code className={`${GeistMono.className} text-[12px]`}>standard</code> mode ships prompt, completion, tool args, and model reasoning text — with emails, phones, SSNs, card numbers, JWTs, and provider API keys replaced in the SDK before egress. Switch to{" "}
+              <code className={`${GeistMono.className} text-[12px]`}>metadata-only</code> if you can&apos;t send any text off-machine.{" "}
               <a href="/privacy" className="underline decoration-coral underline-offset-2 hover:text-ink">
                 What we store →
               </a>

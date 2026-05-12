@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     // One-line wrap. The model behaves identically; whoopsie sees the trace.
-    model: observe(openai("gpt-4o-mini"), { redact: "metadata-only" }),
+    model: observe(openai("gpt-4o-mini"), { redact: "standard" }),
     system:
       "You are a helpful assistant. Be brief — keep answers under 80 words.",
     messages,

@@ -95,7 +95,13 @@ function wrapModelArg(_call: CallExpression, modelProp: ObjectLiteralElementLike
   const initializer = modelProp.asKind(SyntaxKind.PropertyAssignment)?.getInitializer();
   if (!initializer) return;
   const original = initializer.getText();
+  // Emit `redact: "standard"` (the default mode). It ships prompt/completion/
+  // tool args/reasoning text with PII patterns (emails, phones, SSNs, cards,
+  // JWTs, provider API keys) replaced before egress. This is what makes the
+  // hallucination/context/derailment/repetition detectors usable — they need
+  // text to compare. `metadata-only` is still a one-flag flip for users who
+  // genuinely cannot ship any prompt content off-machine.
   initializer.replaceWithText(
-    `observe(${original}, { redact: "metadata-only" })`,
+    `observe(${original}, { redact: "standard" })`,
   );
 }

@@ -116,3 +116,25 @@ test("no platform's template teaches the deprecated toDataStreamResponse() patte
     );
   }
 });
+
+test("base instructions recommend redact: 'standard' (not 'metadata-only')", () => {
+  // SDK 0.5.0 + CLI 0.3.0 ship reasoning capture and flip the recommended
+  // redact mode from metadata-only (which neutered 4 of 7 detectors) to
+  // standard (full prompt/completion/tool args/reasoning with PII scrub).
+  // The install prompts must teach the new posture; metadata-only stays
+  // available as an opt-in but is no longer the headline recommendation.
+  const sample = getPlatform("cursor")!.template("ws_test_12345");
+  assert.match(
+    sample,
+    /observe\(openai\("gpt-4o"\), \{ redact: "standard" \}\)/,
+    "prompts must show the standard redact mode as the canonical example",
+  );
+  // It's OK (and desirable) to mention metadata-only as the opt-in for the
+  // privacy-conservative — we just don't want it as the recommended pattern
+  // in the code snippet itself.
+  assert.doesNotMatch(
+    sample,
+    /observe\(openai\("gpt-4o"\), \{ redact: "metadata-only" \}\)/,
+    "prompts must not show metadata-only as the recommended code example",
+  );
+});

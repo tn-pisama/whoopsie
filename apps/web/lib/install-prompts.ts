@@ -43,7 +43,7 @@ The package is @whoopsie/sdk. It's a Vercel AI SDK middleware that streams trace
 - privacy / data handling: https://whoopsie.dev/privacy
 - license: MIT
 
-For first install I want the safest default — metadata-only mode, where the SDK ships token counts, finish reasons, tool names, and detector verdicts but zero prompt or completion text.
+For first install I want full traces with PII scrubbed — \`standard\` mode. The SDK ships my prompt, the model's completion, tool args/results, and reasoning text (when the model emits it: o1, Claude extended thinking, Gemini thinking). Before any of that leaves my app, the SDK replaces common PII patterns — emails, phone numbers, SSNs, card-shaped numbers, JWTs, and OpenAI/Anthropic/AWS/GitHub/Slack-shaped API keys — with placeholders like \`[email]\`. The server then re-runs the same scrub before persisting. Token counts, model name, finish reason, timing, and detector verdicts also come along. If my prompts may contain anything that can't leave the box at all, I'll switch to \`redact: "metadata-only"\` instead — that ships token counts and detector verdicts and nothing else.
 
 **Use the \`observe()\` helper. It's a single function call — do not write your own \`wrapLanguageModel\` pattern.** This matters because past installs failed silently when AI agents reconstructed the wrap incorrectly. The correct usage is exactly:
 
@@ -53,7 +53,7 @@ import { observe } from "@whoopsie/sdk";
 // before:
 //   model: openai("gpt-4o"),
 // after — wrap whatever model is currently there:
-const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
+const model = observe(openai("gpt-4o"), { redact: "standard" });
 \`\`\`
 
 That's it. Do not import \`wrapLanguageModel\` from "ai". Do not call \`whoopsieMiddleware(...)\` directly. Do not pass the middleware as an option — \`observe(model, opts)\` returns the wrapped model.
@@ -68,7 +68,7 @@ That's it. Do not import \`wrapLanguageModel\` from "ai". Do not call \`whoopsie
 Could you:
 
 1. First: **find the existing \`streamText\` or \`generateText\` call by searching the repo for those exact strings**. Don't guess at file paths. If you don't find one, tell me and skip the install — there's nothing to instrument.
-2. Edit \`observe(<existing-model-expression>, { redact: "metadata-only" })\` **directly at the line where the model is passed to streamText/generateText**. Do not create a new file. Do not put the wrap in a separate \`observability.ts\` or \`lib/\` module. The wrap must be on the model expression that the actual streamText call uses, or it does nothing.
+2. Edit \`observe(<existing-model-expression>, { redact: "standard" })\` **directly at the line where the model is passed to streamText/generateText**. Do not create a new file. Do not put the wrap in a separate \`observability.ts\` or \`lib/\` module. The wrap must be on the model expression that the actual streamText call uses, or it does nothing.
 3. If the route or client is still on the ai@5 API (any of: \`toDataStreamResponse()\`, no \`convertToModelMessages\` call on the messages, \`handleInputChange\`/\`handleSubmit\` from \`useChat\`), migrate it to ai@6 per the gotchas above as part of the same change.
 4. Tell me which file you changed and the exact line you changed.
 

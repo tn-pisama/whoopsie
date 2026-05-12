@@ -84,13 +84,17 @@ Persona drift, multi-agent coordination, and embedding-grade grounding are out o
 
 ## Privacy posture
 
-PII redaction runs in the SDK before bytes leave the machine, and again on the ingest server before anything is written to Postgres. Defaults catch emails, phones, SSNs, credit-card-shaped numbers, JWTs, and OpenAI/Anthropic/AWS/GitHub/Slack-shaped keys.
+PII redaction runs in the SDK before bytes leave the machine, and again on the ingest server before anything is written to Postgres. Default `standard` mode catches emails, phones, SSNs, credit-card-shaped numbers, JWTs, and OpenAI/Anthropic/AWS/GitHub/Slack-shaped keys.
 
 ```ts
+// Default: full prompt + completion + tool args + reasoning, PII-scrubbed.
+observe(model, { redact: "standard" });
+
+// Strict: token counts + detector verdicts only, zero text.
 observe(model, { redact: "metadata-only" });
 ```
 
-`metadata-only` ships span shape, token counts, and detector verdicts with zero prompt or completion text. Use it when you cannot send any prompt content off-machine.
+`standard` ships prompt, completion, tool args/results, and reasoning text (where the model emits it — o1, Claude extended thinking, Gemini thinking) with the PII patterns above replaced before egress. `metadata-only` ships span shape, token counts, finish reasons, tool names, and detector verdicts with zero text — use it when you cannot send any prompt content off-machine.
 
 Hosted ingest has a 7-day rolling delete and no retention upsell.
 

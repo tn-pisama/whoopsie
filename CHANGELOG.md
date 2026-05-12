@@ -32,6 +32,17 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 ## `@whoopsie/sdk`
 
+### `0.5.0` — 2026-05-11
+
+**Added**
+- **`reasoning` field on `TraceEvent`.** The middleware now captures chain-of-thought / reasoning content from models that expose it (o1, Claude extended thinking, Gemini thinking). The streaming path collects `reasoning-delta` chunks; the non-streaming `wrapGenerate` path filters `result.content` for `type: "reasoning"` parts. Both go through the same `redactObject(...)` pipeline as `prompt` and `completion` — under `redact: "metadata-only"` reasoning is `undefined`; under `standard` it ships with PII regex-scrubbed.
+
+**Recommended posture change**
+- The recommended `redact` mode in the install prompt, CLI patcher, landing code sample, README, and `examples/next-chatbot-starter` is now **`standard`** (PII-scrubbed full traces). Previously these all taught `metadata-only`, which dropped prompt + completion + tool args/results to `undefined` and neutered four of seven detectors (hallucination, context, derailment, repetition can't compare text they don't have). `metadata-only` is still a supported and documented opt-in for users who genuinely cannot ship any text off-machine — the SDK behavior is unchanged, only the recommendation flipped.
+
+**Tests**
+- 4 new tests in `reasoning.test.ts`: wrapStream captures `reasoning-delta`, wrapGenerate captures `type: "reasoning"` content parts, PII patterns are scrubbed in reasoning text under `standard`, reasoning is `undefined` under `metadata-only`. New `mockReasoningModel` helper in `observe-helpers.ts` emits both shapes.
+
 ### `0.4.1` — 2026-05-10
 
 **Added**
@@ -100,6 +111,15 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 ---
 
 ## `@whoopsie/cli`
+
+### `0.3.0` — 2026-05-11
+
+**Changed**
+- **Patcher emits `redact: "standard"` instead of `metadata-only`.** Pairs with `@whoopsie/sdk@0.5.0` which adds reasoning capture and re-recommends the standard posture (full prompt/completion/tool args/reasoning, PII-scrubbed). The new emit:
+  ```ts
+  observe(${original}, { redact: "standard" })
+  ```
+  `metadata-only` remains a supported mode — anyone who wants the strict posture can change the one flag after the patch. `init.test.ts` updated to assert the new emit and reject the old one.
 
 ### `0.2.0` — 2026-05-10
 

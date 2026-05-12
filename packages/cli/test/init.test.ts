@@ -71,7 +71,7 @@ test("init writes WHOOPSIE_PROJECT_ID and patches the streamText call", async ()
     // two-step wrapLanguageModel + whoopsieMiddleware pattern. This matches
     // what the install page tells users to write.
     assert.match(route, /import \{ observe \} from "@whoopsie\/sdk"/);
-    assert.match(route, /observe\(openai\("gpt-4o"\), \{ redact: "metadata-only" \}\)/);
+    assert.match(route, /observe\(openai\("gpt-4o"\), \{ redact: "standard" \}\)/);
     // And the patcher should NOT introduce the old pattern.
     assert.doesNotMatch(route, /wrapLanguageModel/);
     assert.doesNotMatch(route, /whoopsieMiddleware/);

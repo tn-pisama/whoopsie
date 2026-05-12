@@ -6,7 +6,7 @@ export const metadata = {
     "What whoopsie collects, where it goes, how long it stays, and how to delete it.",
 };
 
-const LAST_UPDATED = "2026-05-09";
+const LAST_UPDATED = "2026-05-11";
 
 export default function PrivacyPage() {
   return (
@@ -41,10 +41,12 @@ export default function PrivacyPage() {
         <Block heading="What we collect">
           <p>
             For each AI request the SDK is wrapped around: your prompt, the
-            model&apos;s response, tool calls (name, arguments, result), and
-            metadata like model name, token counts, cost, finish reason, and
-            timing. Your project ID travels with each event so the dashboard
-            knows where to display it.
+            model&apos;s response, tool calls (name, arguments, result),
+            reasoning / chain-of-thought text when the model emits it (o1,
+            Claude extended thinking, Gemini thinking), and metadata like
+            model name, token counts, cost, finish reason, and timing. Your
+            project ID travels with each event so the dashboard knows where
+            to display it.
           </p>
           <p className="mt-3">
             Common PII patterns — emails, phone numbers, SSNs, credit-card
