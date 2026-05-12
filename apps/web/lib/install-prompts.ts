@@ -61,7 +61,13 @@ That's it. Do not import \`wrapLanguageModel\` from "ai". Do not call \`whoopsie
 **Vercel AI SDK v6 gotchas (very common ai@5 → ai@6 mistakes):**
 
 - The chat route must end with \`return result.toUIMessageStreamResponse()\` — \`toDataStreamResponse()\` was removed in v6.
-- Before passing messages to \`streamText\`, run them through \`convertToModelMessages\`: \`streamText({ model, messages: convertToModelMessages(messages) })\`. The React \`useChat\` hook posts UIMessages with \`parts\` arrays; \`streamText\` only accepts ModelMessages.
+- \`convertToModelMessages\` is **async** in \`ai@6.0.x\` — it returns \`Promise<ModelMessage[]>\`, not \`ModelMessage[]\`. Await it before passing into \`streamText\`:
+  \`\`\`ts
+  const modelMessages = await convertToModelMessages(messages);
+  const result = streamText({ model, messages: modelMessages });
+  \`\`\`
+  If you skip the \`await\`, TypeScript errors with \`Type 'Promise<ModelMessage[]>' is missing the following properties from type 'ModelMessage[]'\`. The React \`useChat\` hook posts UIMessages with \`parts\` arrays; \`streamText\` only accepts ModelMessages, so the conversion is required.
+- \`@whoopsie/sdk\` ≥ 0.5 wraps a \`LanguageModelV3\` (the spec shipped by \`ai@6\`). If your project still has \`@ai-sdk/openai@^2\` (or any provider on the V2 spec), \`next build\` errors with \`Type '"v2"' is not assignable to type '"v3"'\` on the \`observe()\` call site. Fix by upgrading the provider: \`pnpm add @ai-sdk/openai@^3\` (or the equivalent for npm/yarn/bun, and the matching v3 release for \`@ai-sdk/anthropic\`, \`@ai-sdk/google\`, etc.). Verified 2026-05-12 against a fresh Next.js 16 + ai@6.0.180 + @ai-sdk/openai@3.0.63 install.
 - On the React side, \`useChat\` no longer returns \`{ input, handleInputChange, handleSubmit }\`. Use \`{ messages, sendMessage, status } = useChat()\` and manage the input string yourself with \`useState\`. Call \`sendMessage({ text: input })\` on submit.
 - The eager-flush serverless mode auto-detects Vercel (\`VERCEL=1\`), AWS Lambda, Netlify, Cloud Run, Cloudflare Workers, and Vercel Edge. You do not need to configure it; just confirm the install logs print \`[whoopsie] enabled · project=ws_…\` on first request.
 

@@ -89,6 +89,58 @@ test("base instructions teach the ai@6 migration gotchas (convertToModelMessages
   assert.match(sample, /sendMessage/);
 });
 
+test("base instructions teach the async convertToModelMessages gotcha (ai@6.0.x makes it return Promise)", () => {
+  // The 2026-05-12 Cursor end-to-end test scaffolded a fresh Next.js + ai@6
+  // chat and the install failed to typecheck because the prompt taught the
+  // pre-6.0.x synchronous signature: `messages: convertToModelMessages(messages)`.
+  // Real signature in 6.0.180 is async — must be awaited. The prompt now
+  // shows the awaited pattern; lock it so future drift doesn't regress.
+  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+    const prompt = getPlatform(slug)!.template("ws_test_12345");
+    assert.match(
+      prompt,
+      /await convertToModelMessages/,
+      `${slug}: prompt must teach await convertToModelMessages (ai@6.0.x is async)`,
+    );
+  }
+});
+
+test("base instructions teach the LanguageModelV2 → V3 upgrade for @ai-sdk/openai", () => {
+  // The 2026-05-12 Cursor end-to-end test also surfaced that a fresh
+  // `pnpm add @ai-sdk/openai` against an older lockfile pulled @ai-sdk/openai@^2
+  // (LanguageModelV2), and @whoopsie/sdk >= 0.5 expects V3. The prompt has
+  // to warn so AI agents upgrade the provider as part of the install.
+  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+    const prompt = getPlatform(slug)!.template("ws_test_12345");
+    assert.match(
+      prompt,
+      /@ai-sdk\/openai@\^3/,
+      `${slug}: prompt must instruct upgrading @ai-sdk/openai to ^3 (V3 spec) for SDK 0.5+`,
+    );
+    assert.match(
+      prompt,
+      /'"v2"' is not assignable to type '"v3"'/,
+      `${slug}: prompt must show the actual V2/V3 typecheck error so the AI recognizes it`,
+    );
+  }
+});
+
+test("base instructions do not teach the deprecated SYNC convertToModelMessages call pattern", () => {
+  // The pre-6.0.x sync form is the failure mode we want to prevent. The
+  // canonical pattern is `await convertToModelMessages(messages)`. We accept
+  // any whitespace between `messages:` and the call, but the immediate
+  // bareword `convertToModelMessages` (without `await`) in the messages slot
+  // of a streamText call is the regression we're guarding against.
+  for (const slug of ["lovable", "replit", "bolt", "cursor", "v0"]) {
+    const prompt = getPlatform(slug)!.template("ws_test_12345");
+    assert.doesNotMatch(
+      prompt,
+      /messages:\s*convertToModelMessages\(/,
+      `${slug}: prompt must not teach the deprecated synchronous convertToModelMessages(messages) call pattern`,
+    );
+  }
+});
+
 test("Replit platform includes the Replit framework note (proxy + deployment secrets)", () => {
   const replit = getPlatform("replit")!;
   const prompt = replit.template("ws_test_12345");
