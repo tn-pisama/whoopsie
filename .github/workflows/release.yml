@@ -50,4 +50,9 @@ jobs:
         run: pnpm test
 
       - name: Publish to npm
-        run: pnpm -r --filter ./packages/* publish --access public --no-git-checks --provenance
+        # `pnpm publish` must come BEFORE -r/--filter, otherwise pnpm parses
+        # `publish` as a script name (it looks for a "publish" script in each
+        # workspace package) and silently no-ops with "None of the selected
+        # packages has a 'publish' script". That broke the v0.5.0 run on
+        # 2026-05-12 — workflow went green but zero packages went to npm.
+        run: pnpm publish -r --filter "./packages/*" --access public --no-git-checks --provenance
