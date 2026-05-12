@@ -17,9 +17,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
+        # pnpm version comes from root package.json `packageManager` field
+        # (pnpm@9.0.0). pnpm/action-setup@v4 rejects when both an explicit
+        # `version:` input AND `packageManager` are set ("Multiple versions
+        # of pnpm specified"), so we deliberately omit the input.
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
