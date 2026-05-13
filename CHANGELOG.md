@@ -32,6 +32,11 @@ const model = observe(openai("gpt-4o"), { redact: "metadata-only" });
 
 ## `@whoopsie/sdk`
 
+### `0.5.1` — 2026-05-13
+
+**Added**
+- **`WHOOPSIE_PLATFORM` env var support.** When set, the middleware reads it once at construction, validates against a strict slug shape (`/^[a-z0-9-]{1,32}$/`), and attaches it as `metadata.whoopsie_platform` on every trace. Lets the dashboard surface per-platform install health and alarm when a platform's AI builder regresses. The install prompts on `/install` now teach the AI to set this env var alongside `WHOOPSIE_PROJECT_ID`. The tag is install-source metadata at the same disclosure level as the model name — no user-content text. Unset the env var to drop the tag.
+
 ### `0.5.0` — 2026-05-11
 
 **Added**
