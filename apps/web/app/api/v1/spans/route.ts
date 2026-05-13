@@ -18,13 +18,27 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const SERVER_REDACT_MODE: RedactMode = "standard";
 
 // Allowlist of metadata keys that pass through unredacted. `contact` is the
-// opt-in alert email and is validated/stored separately. Anything else under
-// metadata is treated as free-form user content and scrubbed.
-const METADATA_PASSTHROUGH_KEYS = new Set(["contact"]);
+// opt-in alert email and is validated/stored separately. `whoopsie_platform`
+// is the install-source tag written by the AI builder at install time
+// (lovable / replit / bolt / v0); it's non-sensitive metadata about the
+// install itself, same disclosure level as the model name. We additionally
+// re-validate it server-side against a strict slug allowlist so a junk
+// value from a tampered client doesn't pollute the health-monitor queries.
+const METADATA_PASSTHROUGH_KEYS = new Set(["contact", "whoopsie_platform"]);
+const VALID_PLATFORM_SLUGS = new Set(["lovable", "replit", "bolt", "v0"]);
 
 function scrubMetadata(meta: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(meta)) {
+    if (k === "whoopsie_platform") {
+      // Validate the slug shape rather than redacting — anything outside the
+      // allowlist is dropped, never persisted. Cheap defence against a
+      // malicious client trying to inject `whoopsie_platform: <html>` etc.
+      if (typeof v === "string" && VALID_PLATFORM_SLUGS.has(v.toLowerCase())) {
+        out[k] = v.toLowerCase();
+      }
+      continue;
+    }
     out[k] = METADATA_PASSTHROUGH_KEYS.has(k)
       ? v
       : redactObject(v, SERVER_REDACT_MODE);

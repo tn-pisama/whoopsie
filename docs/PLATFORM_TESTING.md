@@ -1,6 +1,19 @@
 # Cross-Platform Install Testing
 
-Manual checklist for verifying that the install prompts on `whoopsie.dev/install` actually produce working integrations on each AI builder. Run before each SDK release and at least monthly.
+Manual checklist for verifying that the install prompts on `whoopsie.dev/install` actually produce working integrations on each AI builder. Part of the four-layer drift-detection plan (`docs/` plans, 2026-05-13).
+
+## When to run
+
+| Trigger | Cadence | Owner |
+|---|---|---|
+| Before every SDK / CLI release | once, per release | release engineer |
+| Quarterly drift check | every 90 days (next: **2026-08-13**) | maintainer, calendar reminder |
+| Ad hoc — Layer 2 alarm fired | within 48h | whoever the digest emailed |
+| Ad hoc — Layer 5 changelog watcher flagged a platform | within 1 week | maintainer |
+
+The quarterly check exists because Layer 2's passive telemetry (the `/api/internal/platform-health` cron) catches *volume / error-rate* drift, but not *structural* drift (e.g. the platform's AI now emits a wrap that compiles + traces but instruments a dead model path). Only a human pasting the prompt into the platform's UI catches that.
+
+When the Layer 2 cron sends an alarm digest, the recipient's first action is to run the affected platform's section of this checklist. The digest mail's body links here.
 
 ## Why manual
 
@@ -65,8 +78,8 @@ Skipped from regular rotation. If/when Bolt is brought back into scope:
 
 Update this table each run. Commit alongside any prompt or SDK changes that triggered the test.
 
-| Date | SDK | CLI | Platform | AI accepted | observe() used | Env var | verify | Trace landed | Notes |
-|---|---|---|---|---|---|---|---|---|---|
+| Date | Tester | SHA | SDK | CLI | Platform | AI accepted | observe() used | Env var | verify | Trace landed | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-05-10 | 0.2.0 | 0.1.0 | v0 | ✓ (with 0.1.0 prompt) | ✗ (typo'd wrap) | ✓ | n/a | ✗ HTTP 500 | Pre-0.1.0 SDK test. Fix shipped after; re-test pending. |
 | 2026-05-10 | 0.0.2 | n/a | Lovable | ✓ | unverified | ✓ | n/a | ✗ silent | Chat returned real completion; zero traces. TanStack Start framework. Lovable-specific prompt added in 0.2.0 release. |
 | 2026-05-10 | 0.0.2 | n/a | Replit | ✓ planning | unverified | partial | n/a | ✗ hang | Chat never returned a response. Root cause undiagnosed. |
@@ -85,6 +98,4 @@ Update this table each run. Commit alongside any prompt or SDK changes that trig
 
 ## Cadence
 
-- **Before every SDK release**: full pass, all in-scope platforms (Lovable, Replit, Bolt, v0). Log results.
-- **Monthly**: same, plus check `/install` copy is still accurate.
-- **Ad hoc**: when a user reports a regression, do a targeted test of just that platform first.
+See the "When to run" table at the top of this doc. The four triggers (release, quarterly, Layer-2 alarm, Layer-5 changelog flag) compose into the union "regular basis" that keeps installs working across platform drift.

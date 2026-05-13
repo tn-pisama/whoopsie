@@ -32,6 +32,7 @@ export interface PlatformPrompt {
 const baseInstructions = (
   projectId: string,
   envVarLocation: string,
+  platformSlug: string,
   frameworkNote?: string,
 ) =>
   `I'd like to add lightweight observability to a side-project AI app I'm working on. Heads-up before you start: the package is brand-new and low-adoption — first published 2026-05-01 — so this is for a non-critical project, not anything in production. If my code doesn't actually have an AI SDK call to instrument yet, please tell me and skip the install.${frameworkNote ? `\n\n${frameworkNote}` : ""}
@@ -78,7 +79,7 @@ Could you:
 3. If the route or client is still on the ai@5 API (any of: \`toDataStreamResponse()\`, no \`convertToModelMessages\` call on the messages, \`handleInputChange\`/\`handleSubmit\` from \`useChat\`), migrate it to ai@6 per the gotchas above as part of the same change.
 4. Tell me which file you changed and the exact line you changed.
 
-I'll separately set \`WHOOPSIE_PROJECT_ID=${projectId}\` in ${envVarLocation}; the dashboard lives at https://whoopsie.dev/live/${projectId}.
+I'll separately set two env vars in ${envVarLocation}: \`WHOOPSIE_PROJECT_ID=${projectId}\` (which dashboard your traces land on) and \`WHOOPSIE_PLATFORM=${platformSlug}\` (lets whoopsie tag this install as coming from ${platformSlug} so we can spot when their AI builder's behavior changes and the install starts silently breaking — the slug is non-sensitive metadata, same level as the model name, and is disclosed on /privacy). The dashboard lives at https://whoopsie.dev/live/${projectId}.
 
 To verify the install is wired correctly (independent of whether your AI call actually fires yet), tell me to run \`npx @whoopsie/cli verify\` in a terminal. It posts a synthetic trace and confirms the round-trip — if it passes but real chats don't produce traces, the gap is in the code wrap. If it fails, the gap is in env vars or network egress. Either way it tells me where to look.
 
@@ -103,6 +104,7 @@ export const platforms: PlatformPrompt[] = [
       baseInstructions(
         id,
         "Lovable's Cloud tab → Secrets (click + next to Preview in the editor)",
+        "lovable",
         LOVABLE_FRAMEWORK_NOTE,
       ),
   },
@@ -118,6 +120,7 @@ export const platforms: PlatformPrompt[] = [
       baseInstructions(
         id,
         "the Replit Secrets pane (left sidebar, padlock icon); for a published .replit.app deployment, also add the same secrets to the deployment's Manage tab",
+        "replit",
         REPLIT_FRAMEWORK_NOTE,
       ),
   },
@@ -133,7 +136,8 @@ export const platforms: PlatformPrompt[] = [
     // whoopsie.dev/api/v1/spans, and a clean trace lands (e.g.
     // Ug0bt4bfSnHD8WMIaOBml, 18/5 tokens, no error). Once OPENAI_API_KEY is
     // in .env the chat returns real gpt-4o-mini responses.
-    template: (id) => baseInstructions(id, "the .env file at the project root"),
+    template: (id) =>
+      baseInstructions(id, "the .env file at the project root", "bolt"),
   },
   {
     slug: "v0",
@@ -142,7 +146,7 @@ export const platforms: PlatformPrompt[] = [
     whereToPaste: "the v0.dev chat",
     envVarLocation: "the Vars panel in the v0 chat sidebar",
     template: (id) =>
-      baseInstructions(id, "the Vars panel in the v0 chat sidebar"),
+      baseInstructions(id, "the Vars panel in the v0 chat sidebar", "v0"),
   },
 ];
 

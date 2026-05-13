@@ -5,6 +5,7 @@
   "buildCommand": "cd ../.. && pnpm --filter '@whoopsie/web...' build",
   "outputDirectory": ".next",
   "crons": [
-    { "path": "/api/internal/cleanup", "schedule": "0 5 * * *" }
+    { "path": "/api/internal/cleanup", "schedule": "0 5 * * *" },
+    { "path": "/api/internal/platform-health", "schedule": "0 14 * * *" }
   ]
 }

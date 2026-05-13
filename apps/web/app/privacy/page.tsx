@@ -7,7 +7,7 @@ export const metadata = {
     "What whoopsie collects, where it goes, how long it stays, and how to delete it.",
 };
 
-const LAST_UPDATED = "2026-05-11";
+const LAST_UPDATED = "2026-05-13";
 
 export default function PrivacyPage() {
   return (
@@ -65,6 +65,20 @@ export default function PrivacyPage() {
             <code className={GeistMono.className}>redact: &quot;metadata-only&quot;</code>{" "}
             in the SDK options — token counts and detector verdicts only, zero
             text.
+          </p>
+          <p className="mt-3">
+            If your install came from one of the AI builder paths on{" "}
+            <a href="/install" className="underline decoration-coral underline-offset-2">/install</a>
+            {" "}(Lovable, Replit, Bolt, v0), the install prompt sets a{" "}
+            <code className={GeistMono.className}>WHOOPSIE_PLATFORM</code> env
+            var with that slug (e.g. {" "}
+            <code className={GeistMono.className}>lovable</code>). The SDK
+            attaches it as <code className={GeistMono.className}>metadata.whoopsie_platform</code>
+            {" "}on each trace so we can monitor whether installs from a given
+            platform start silently breaking after the platform changes its AI
+            builder. The slug is install-source metadata at the same disclosure
+            level as the model name — it contains no user-content text. You can
+            unset the env var to drop the tag.
           </p>
           <p className="mt-3">
             If you opt in to the contact-email field on{" "}

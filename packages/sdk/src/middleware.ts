@@ -201,6 +201,17 @@ function buildMiddleware(
   if (opts.contact && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(opts.contact)) {
     baseMetadata.contact = opts.contact;
   }
+  // Install-source tag. Written by the AI builder during install (per the
+  // /install prompt), so traces carry where the install came from. Lets the
+  // dashboard surface per-platform first-install success rate and alarm
+  // when a platform regresses. Validated against a strict slug allowlist —
+  // junk values are dropped so we can rely on the column server-side.
+  if (typeof process !== "undefined") {
+    const rawPlatform = process.env.WHOOPSIE_PLATFORM?.trim().toLowerCase();
+    if (rawPlatform && /^[a-z0-9-]{1,32}$/.test(rawPlatform)) {
+      baseMetadata.whoopsie_platform = rawPlatform;
+    }
+  }
 
   // Eager flush: required on Cloudflare Workers / Vercel Edge / Deno Deploy
   // where the isolate is frozen after the response finishes — the lazy

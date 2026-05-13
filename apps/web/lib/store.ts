@@ -28,6 +28,23 @@ export interface ContactWithAlerts {
   source: string;
 }
 
+export interface PlatformEventStats {
+  events: number;
+  errors: number;
+}
+
+export interface PlatformInstallStats {
+  /** Distinct projectIds whose first-ever trace fell in the window. */
+  firstInstalls: number;
+  /**
+   * Of those first-install projects, how many have ≥ 2 events lifetime. Proxy
+   * for "the install actually worked + the chat is being used past first
+   * paint." `firstInstalls - successfulInstalls` ≈ silent installs (the wrap
+   * fired once and never again).
+   */
+  successfulInstalls: number;
+}
+
 export interface Store {
   publish(projectId: string, payload: TraceWithHits): Promise<void>;
   recent(projectId: string, n?: number): Promise<TraceWithHits[]>;
@@ -35,6 +52,26 @@ export interface Store {
     projectId: string,
     listener: (payload: TraceWithHits) => void,
   ): Promise<() => void>;
+  /**
+   * Event counts + error counts in [since, until), grouped by
+   * `metadata.whoopsie_platform`. Projects without the platform tag are
+   * grouped under `"untagged"`. Used by the daily platform-health cron to
+   * detect drift after a platform changes its AI builder behavior.
+   */
+  eventStatsByPlatform(
+    sinceMs: number,
+    untilMs: number,
+  ): Promise<Record<string, PlatformEventStats>>;
+  /**
+   * Counts of projects whose first-ever trace landed in [since, until), and
+   * of those how many have ≥ 2 events lifetime — grouped by the platform
+   * slug read off the project's first row. The two numbers together give a
+   * "new install success rate" per platform that the cron alarms on.
+   */
+  firstInstallStatsByPlatform(
+    sinceMs: number,
+    untilMs: number,
+  ): Promise<Record<string, PlatformInstallStats>>;
   saveContact(record: ContactRecord): Promise<{ created: boolean }>;
   /**
    * Returns contacts for a project that have NOT yet received an alert of
@@ -153,6 +190,56 @@ export class MemoryStore implements Store {
     });
   }
 
+  async eventStatsByPlatform(
+    sinceMs: number,
+    untilMs: number,
+  ): Promise<Record<string, PlatformEventStats>> {
+    const out: Record<string, PlatformEventStats> = {};
+    for (const ch of this.channels.values()) {
+      for (const p of ch.buffer.recent()) {
+        const ts = p.event.endTime;
+        if (ts < sinceMs || ts >= untilMs) continue;
+        const platform = platformOf(p) ?? "untagged";
+        const row = out[platform] ?? { events: 0, errors: 0 };
+        row.events += 1;
+        if (p.event.error) row.errors += 1;
+        out[platform] = row;
+      }
+    }
+    return out;
+  }
+
+  async firstInstallStatsByPlatform(
+    sinceMs: number,
+    untilMs: number,
+  ): Promise<Record<string, PlatformInstallStats>> {
+    const out: Record<string, PlatformInstallStats> = {};
+    for (const [projectId, ch] of this.channels) {
+      const items = ch.buffer.recent();
+      if (items.length === 0) continue;
+      // First-ever trace for this project, by endTime. Ring buffer is insert-
+      // ordered so [0] is the oldest in-memory item — but to be safe across
+      // ring evictions, compute min explicitly.
+      let firstAt = items[0]!.event.endTime;
+      let firstItem = items[0]!;
+      for (const p of items) {
+        if (p.event.endTime < firstAt) {
+          firstAt = p.event.endTime;
+          firstItem = p;
+        }
+      }
+      if (firstAt < sinceMs || firstAt >= untilMs) continue;
+      const platform = platformOf(firstItem) ?? "untagged";
+      const row = out[platform] ?? { firstInstalls: 0, successfulInstalls: 0 };
+      row.firstInstalls += 1;
+      if (items.length >= 2) row.successfulInstalls += 1;
+      out[platform] = row;
+      // Suppress lint about unused var
+      void projectId;
+    }
+    return out;
+  }
+
   // Used by tests + admin scripts that drive MemoryStore directly.
   listContacts(): ContactRecord[] {
     return Array.from(this.contacts.values());
@@ -160,6 +247,11 @@ export class MemoryStore implements Store {
   listTosAcceptances(): TosAcceptance[] {
     return [...this.tosAcceptances];
   }
+}
+
+function platformOf(p: TraceWithHits): string | null {
+  const tag = p.event.metadata?.whoopsie_platform;
+  return typeof tag === "string" ? tag : null;
 }
 
 const NOTIFY_CHANNEL = "whoopsie_traces";
@@ -349,6 +441,87 @@ export class PostgresStore implements Store {
         record.userAgent ?? null,
       ],
     );
+  }
+
+  async eventStatsByPlatform(
+    sinceMs: number,
+    untilMs: number,
+  ): Promise<Record<string, PlatformEventStats>> {
+    await this.migrate();
+    // JSONB path: payload.event.metadata.whoopsie_platform. Rows without the
+    // tag (legacy installs, untagged direct API calls) bucket as "untagged".
+    // We don't index this JSONB path — the cron runs daily over a 24h slice,
+    // tables are small (7-day TTL), so a seqscan is acceptable. Revisit if
+    // the table grows past a few million rows.
+    const res = await this.pool.query<{
+      platform: string | null;
+      events: string;
+      errors: string;
+    }>(
+      `SELECT
+         payload->'event'->'metadata'->>'whoopsie_platform' AS platform,
+         COUNT(*) AS events,
+         COUNT(*) FILTER (
+           WHERE payload->'event'->'error' IS NOT NULL
+         ) AS errors
+       FROM whoopsie_traces
+       WHERE created_at >= to_timestamp($1 / 1000.0)
+         AND created_at <  to_timestamp($2 / 1000.0)
+       GROUP BY platform`,
+      [sinceMs, untilMs],
+    );
+    const out: Record<string, PlatformEventStats> = {};
+    for (const r of res.rows) {
+      const key = r.platform ?? "untagged";
+      out[key] = { events: Number(r.events), errors: Number(r.errors) };
+    }
+    return out;
+  }
+
+  async firstInstallStatsByPlatform(
+    sinceMs: number,
+    untilMs: number,
+  ): Promise<Record<string, PlatformInstallStats>> {
+    await this.migrate();
+    // A "first install" = the minimum trace row across the project's
+    // lifetime. We pick that row, read its platform tag, and count distinct
+    // projects per platform. Then a sibling subquery tells us how many
+    // events that project has lifetime so we can flag "first event landed but
+    // the chat never came back" as a likely silent install.
+    const res = await this.pool.query<{
+      platform: string | null;
+      first_installs: string;
+      successful_installs: string;
+    }>(
+      `WITH project_first AS (
+         SELECT
+           project_id,
+           MIN(id)         AS first_id,
+           MIN(created_at) AS first_at,
+           COUNT(*)        AS total_events
+         FROM whoopsie_traces
+         GROUP BY project_id
+       )
+       SELECT
+         t.payload->'event'->'metadata'->>'whoopsie_platform' AS platform,
+         COUNT(*) AS first_installs,
+         COUNT(*) FILTER (WHERE pf.total_events >= 2) AS successful_installs
+       FROM project_first pf
+       JOIN whoopsie_traces t ON t.id = pf.first_id
+       WHERE pf.first_at >= to_timestamp($1 / 1000.0)
+         AND pf.first_at <  to_timestamp($2 / 1000.0)
+       GROUP BY platform`,
+      [sinceMs, untilMs],
+    );
+    const out: Record<string, PlatformInstallStats> = {};
+    for (const r of res.rows) {
+      const key = r.platform ?? "untagged";
+      out[key] = {
+        firstInstalls: Number(r.first_installs),
+        successfulInstalls: Number(r.successful_installs),
+      };
+    }
+    return out;
   }
 
   async close(): Promise<void> {

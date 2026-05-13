@@ -102,3 +102,60 @@ export async function sendTransactional(
     return { ok: false, error: msg };
   }
 }
+
+export interface HealthDigestRow {
+  platform: string;
+  events: number;
+  errors: number;
+  firstInstalls: number;
+  successfulInstalls: number;
+  /** Human reason this row breached. Empty when row is informational only. */
+  alarms: string[];
+}
+
+/**
+ * Daily platform-health digest. Sent to the operator inbox (defaults to
+ * tuomo@pisama.ai) when any per-platform alarm threshold trips. The body is
+ * intentionally plain-text so it renders cleanly in any client + grep tooling.
+ * Returns the underlying mail-relay result so the cron route can log status.
+ */
+export async function sendHealthDigest(opts: {
+  to?: string;
+  rows: HealthDigestRow[];
+  windowSinceMs: number;
+  windowUntilMs: number;
+}): Promise<MailSendResult> {
+  const recipient =
+    opts.to ?? process.env.WHOOPSIE_OPERATOR_EMAIL ?? "tuomo@pisama.ai";
+  const breaches = opts.rows.filter((r) => r.alarms.length > 0);
+  const subject =
+    breaches.length > 0
+      ? `[whoopsie health] ${breaches.length} platform${breaches.length === 1 ? "" : "s"} flagging drift`
+      : `[whoopsie health] daily digest — all platforms nominal`;
+  const lines: string[] = [];
+  lines.push(`Window: ${new Date(opts.windowSinceMs).toISOString()} → ${new Date(opts.windowUntilMs).toISOString()}`);
+  lines.push("");
+  lines.push("Per-platform stats (events / errors · new installs / successful):");
+  for (const r of opts.rows) {
+    const successRate =
+      r.firstInstalls > 0
+        ? Math.round((100 * r.successfulInstalls) / r.firstInstalls)
+        : 0;
+    lines.push(
+      `  ${r.platform.padEnd(10)} ${String(r.events).padStart(6)} / ${String(r.errors).padStart(4)}  ·  ${String(r.firstInstalls).padStart(4)} / ${String(r.successfulInstalls).padStart(4)} (${successRate}%)` +
+        (r.alarms.length > 0 ? `  ← ${r.alarms.join("; ")}` : ""),
+    );
+  }
+  if (breaches.length > 0) {
+    lines.push("");
+    lines.push(
+      "Action: re-run the manual install flow on the flagged platform(s).",
+    );
+    lines.push("Runbook: docs/PLATFORM_TESTING.md");
+  }
+  return sendTransactional({
+    to: recipient,
+    subject,
+    text: lines.join("\n"),
+  });
+}

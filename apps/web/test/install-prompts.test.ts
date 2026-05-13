@@ -156,6 +156,23 @@ test("Replit platform includes the Replit framework note (proxy + deployment sec
   );
 });
 
+test("every platform's prompt teaches WHOOPSIE_PLATFORM=<slug> (drift-monitoring foundation)", () => {
+  // Layer 1 of the platform-compatibility drift detection plan
+  // (2026-05-13): every install must set WHOOPSIE_PLATFORM so the SDK can
+  // tag each trace with its install source. Without this tag, the daily
+  // /api/internal/platform-health cron can't tell when a platform's installs
+  // start silently breaking. Per-platform assertion catches a slug typo or
+  // a missed call site in the platforms[] array.
+  for (const slug of ["lovable", "replit", "bolt", "v0"]) {
+    const prompt = getPlatform(slug)!.template("ws_test_drift");
+    assert.match(
+      prompt,
+      new RegExp(`WHOOPSIE_PLATFORM=${slug}\\b`),
+      `${slug}: prompt must teach WHOOPSIE_PLATFORM=${slug}`,
+    );
+  }
+});
+
 test("Cursor is no longer a supported platform (intentionally dropped 2026-05-12)", () => {
   // Cursor cloud Agents are paywalled and Cursor.app desktop is not
   // browser-drivable from our test fleet — so the install path could
