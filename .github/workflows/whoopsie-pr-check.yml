@@ -23,15 +23,36 @@ jobs:
   whoopsie-pr-check:
     name: whoopsie failures on preview
     runs-on: ubuntu-latest
-    if: ${{ secrets.WHOOPSIE_PROJECT_ID != '' }}
     steps:
+      # GitHub Actions rejects `secrets.X` in job-level `if:` expressions, so
+      # we gate at step level instead. First step writes `configured=true|false`
+      # to step outputs based on whether the project-id secret is set; every
+      # later step guards on that output. When the secret isn't set, the job
+      # still appears in the Checks list but logs a friendly "skipped — this
+      # workflow is a template" message and exits 0. This is what lets us
+      # ship the file in the upstream repo as a copy-paste template without
+      # tn-pisama/whoopsie's own PRs showing a failing check.
+      - name: Check whoopsie configured
+        id: gate
+        env:
+          PROJECT_ID: ${{ secrets.WHOOPSIE_PROJECT_ID }}
+        run: |
+          if [[ -z "${PROJECT_ID}" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "WHOOPSIE_PROJECT_ID secret not set — this workflow is a template; skipping."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Wait for preview to receive traffic
+        if: steps.gate.outputs.configured == 'true'
         # If your preview deploy needs a moment to wake up + your e2e tests
         # to fire requests through it, give it some time. Adjust to taste.
         run: sleep 60
 
       - name: Fetch recent failures from whoopsie
         id: fetch
+        if: steps.gate.outputs.configured == 'true'
         env:
           PROJECT_ID: ${{ secrets.WHOOPSIE_PROJECT_ID }}
           BASE_URL: ${{ secrets.WHOOPSIE_BASE_URL || 'https://whoopsie.dev' }}
@@ -46,6 +67,7 @@ jobs:
 
       - name: Render comment body
         id: render
+        if: steps.gate.outputs.configured == 'true'
         run: |
           node <<'JS' > /tmp/comment.md
           const fs = require("fs");
@@ -99,6 +121,7 @@ jobs:
           JS
 
       - name: Upsert PR comment
+        if: steps.gate.outputs.configured == 'true'
         uses: actions/github-script@v7
         with:
           script: |

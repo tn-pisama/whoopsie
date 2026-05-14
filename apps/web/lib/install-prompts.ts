@@ -142,8 +142,8 @@ export const platforms: PlatformPrompt[] = [
   {
     slug: "v0",
     name: "v0",
-    blurb: "On v0.dev, paste the prompt below into the chat with v0.",
-    whereToPaste: "the v0.dev chat",
+    blurb: "On v0.app, paste the prompt below into the chat with v0.",
+    whereToPaste: "the v0.app chat",
     envVarLocation: "the Vars panel in the v0 chat sidebar",
     template: (id) =>
       baseInstructions(id, "the Vars panel in the v0 chat sidebar", "v0"),
