@@ -80,7 +80,12 @@ jobs:
         run: pnpm --filter @whoopsie/sdk build
 
       - name: Run framework integration test (mock model)
-        run: pnpm exec tsx packages/sdk/test/integration/${{ matrix.framework }}/${{ matrix.framework }}.test.ts
+        # `pnpm --filter` runs the command from inside the SDK package's
+        # working directory, where tsx is an explicit devDep. The cwd-less
+        # form `pnpm exec tsx ...` only finds tsx if it's hoisted to the
+        # root's node_modules/.bin, which pnpm's default isolated linker
+        # does NOT do.
+        run: pnpm --filter @whoopsie/sdk exec tsx test/integration/${{ matrix.framework }}/${{ matrix.framework }}.test.ts
         env:
           # Mock-model tests don't need a real OpenAI key, but the SDK looks
           # for these vars and we want the same env shape as live.
