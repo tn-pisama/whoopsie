@@ -5,15 +5,18 @@
 # against the framework's route, asserts a trace lands on /live/<ci-id>.
 # Catches SDK regressions before they reach users.
 #
-# CURRENTLY INACTIVE. To activate:
-#   1. Settings → Secrets and variables → Actions, add:
-#      - OPENAI_API_KEY (or a test stand-in for mocked tests)
-#      - VERCEL_TOKEN (for Vercel Sandbox API auth)
-#      - WHOOPSIE_PROJECT_ID_CI (a project id dedicated to CI runs)
-#   2. Replace every `if: false` below with the trigger condition you want
-#      (e.g. remove the line entirely for "always run on this trigger")
-#   3. Push and watch a test PR. Job summary surfaces per-framework pass/fail.
+# Mock-model layer ACTIVE as of 2026-05-13 (Layer 3 of the platform-drift
+# detection plan). Runs nightly at 06:00 UTC, on every push to main that
+# touches packages/sdk/**, on every matching PR, and on workflow_dispatch.
+# What it catches: upstream dep drift (ai@6 → ai@7, @ai-sdk/openai V2/V3
+# spec changes, convertToModelMessages signature drift) and SDK regressions
+# (return-without-wrapping, dropped events, exporter shape changes).
 #
+# Vercel Sandbox live-trace layer STILL INACTIVE — gated behind a separate
+# `if: false` further down. To activate that richer layer:
+#   1. Add repo secrets: OPENAI_API_KEY, VERCEL_TOKEN, WHOOPSIE_PROJECT_ID_CI
+#   2. Remove the second `if: false` (line on the "Vercel Sandbox, live
+#      trace" step)
 # See .github/workflows/README.md for the full activation guide.
 
 name: Cross-framework regression
@@ -39,7 +42,6 @@ permissions:
 jobs:
   framework-matrix:
     name: ${{ matrix.framework }}
-    if: false # ← Remove this line to activate the workflow.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -54,16 +56,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        # pnpm version comes from root package.json `packageManager` field.
+        # pnpm/action-setup@v4 rejects when both an explicit `version:` input
+        # AND `packageManager` are set, so we omit the input. (Same fix as
+        # release.yml after the 2026-05-12 ci(release) regression.)
+        #
+        # IMPORTANT: Setup pnpm BEFORE setup-node — setup-node's `cache: pnpm`
+        # option shells out to pnpm to compute the cache key, so pnpm must
+        # already be on PATH. The reverse order silently disables cache.
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
